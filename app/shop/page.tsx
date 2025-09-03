@@ -1,10 +1,6 @@
-import type { Metadata } from "next"
-import ProductGrid from "@/components/product-grid"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Shop | Walnut Leather",
-  description: "Explore our collection of premium leather jackets crafted to last.",
-}
+import ProductGrid from "@/components/product-grid"
 
 export default function ShopPage() {
   return (
