@@ -1,12 +1,18 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingBag } from "lucide-react"
+import { ShoppingBag, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import { useCart } from "@/components/cart-context"
+import { useAuth } from "@/components/auth-context"
+import AuthModal from "@/components/auth-modal"
 
 export default function Navbar({ cartCount }: { cartCount: number }) {
+  const { count } = useCart()
+  const { isAuthenticated, user, logout } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,6 +37,10 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
         </Link>
         
         <div className="hidden md:flex items-center gap-8">
+          <Link href="/" className="relative text-sm font-medium transition-colors duration-300 group text-white/80 hover:text-white">
+            Home
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full bg-white/60"></span>
+          </Link>
           <Link href="/shop" className="relative text-sm font-medium transition-colors duration-300 group text-white/80 hover:text-white">
             Shop
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full bg-white/60"></span>
@@ -53,24 +63,59 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
           <Button asChild className="font-semibold px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/30" aria-label="Shop jackets">
             <Link href="/shop">Shop now</Link>
           </Button>
+          
+          {/* Authentication Button */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white">
+                <User className="h-4 w-4" />
+                <span className="text-sm font-medium">{user?.name}</span>
+              </div>
+              <Button
+                onClick={logout}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/10"
+                aria-label="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setShowAuthModal(true)}
+              className="font-semibold px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/30"
+              aria-label="Login"
+            >
+              Login
+            </Button>
+          )}
+          
           <Link
-            href="#cart"
+            href="/cart"
             className="relative inline-flex items-center p-3 rounded-xl transition-all duration-300 group hover:bg-white/10"
             aria-label="Cart"
           >
             <ShoppingBag className="h-6 w-6 transition-colors duration-300 text-white group-hover:text-white/80" aria-hidden="true" />
             <span className="sr-only">Items in cart</span>
-            {cartCount > 0 && (
+            {count > 0 && (
               <span
                 className="absolute -top-1 -right-1 h-6 min-w-6 px-1.5 rounded-full text-xs font-bold flex items-center justify-center animate-pulse bg-white/20 backdrop-blur-sm text-white border border-white/30"
-                aria-label={`${cartCount} items in cart`}
+                aria-label={`${count} items in cart`}
               >
-                {cartCount}
+                {count}
               </span>
             )}
           </Link>
         </div>
       </nav>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => setShowAuthModal(false)}
+      />
     </header>
   )
 }

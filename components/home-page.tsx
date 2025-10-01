@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button"
 import Hero from "./hero"
-import ProductGrid from "./product-grid"
+import DynamicProductGrid from "./dynamic-product-grid"
 import Features from "./features"
 import Story from "./story"
+import Link from "next/link"
 
 export default function HomePage() {
   const [cartCount, setCartCount] = useState(0)
@@ -37,7 +39,19 @@ export default function HomePage() {
               Each piece tells a story of craftsmanship and timeless style.
             </p>
           </div>
-          <ProductGrid onAddToCart={handleAddToCart} />
+          
+          <DynamicProductGrid onAddToCart={handleAddToCart} limit={4} />
+          
+          <div className="text-center mt-12">
+            <Link href="/shop">
+              <Button 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3 transition-all duration-300 hover:shadow-lg hover:scale-105"
+              >
+                Explore More Products
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
       

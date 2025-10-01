@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 
@@ -65,9 +66,9 @@ export default function ProductGrid({ onAddToCart }: { onAddToCart: (name: strin
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
       {products.map((p) => (
-        <Card key={p.id} className="group border-border/50 hover:border-border hover:shadow-xl hover:bg-stone-50/90 hover:backdrop-blur-md transition-all duration-500 overflow-hidden bg-card/50 backdrop-blur-sm">
-          <CardHeader className="p-0 relative">
-            <div className="aspect-[4/5] w-full overflow-hidden">
+        <Card key={p.id} className="group border-border/50 hover:border-border hover:shadow-xl hover:bg-stone-50/90 hover:backdrop-blur-md transition-all duration-500 overflow-hidden bg-card/50 backdrop-blur-sm p-0">
+          <Link href={`/products/${p.id}`} className="block">
+            <div className="aspect-[4/5] w-full overflow-hidden cursor-pointer relative">
               <img
                 src={p.image || "/placeholder.svg?height=600&width=600&query=walnut%20leather%20jacket"}
                 alt={`${p.name} in walnut brown leather`}
@@ -76,19 +77,14 @@ export default function ProductGrid({ onAddToCart }: { onAddToCart: (name: strin
               />
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              
-              {/* Quick view button */}
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                <Button size="sm" variant="secondary" className="bg-background/90 backdrop-blur-sm border border-border/50 shadow-lg">
-                  Quick View
-                </Button>
-              </div>
             </div>
-          </CardHeader>
+          </Link>
           
           <CardContent className="p-6 space-y-4 group-hover:bg-stone-50/50 transition-colors duration-500">
             <div className="space-y-2">
-              <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300">{p.name}</h3>
+              <Link href={`/products/${p.id}`}>
+                <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300 cursor-pointer hover:underline">{p.name}</h3>
+              </Link>
               <p className="text-sm text-muted-foreground leading-relaxed">Full‑grain leather, hand‑finished with premium hardware.</p>
             </div>
             
