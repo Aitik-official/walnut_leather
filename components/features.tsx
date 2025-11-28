@@ -50,14 +50,7 @@ const testimonials = [
 
 export default function Features() {
   return (
-    <section aria-labelledby="features" className="px-6 md:px-10 lg:px-16 py-20 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-orange-50/40 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-20 w-32 h-32 bg-primary rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-40 h-40 bg-secondary rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-primary/20 rounded-full blur-3xl"></div>
-      </div>
-      
+    <section aria-labelledby="features" className="px-6 md:px-10 lg:px-16 py-20 relative overflow-hidden" style={{ backgroundColor: '#F3F3F3', zIndex: 1 }}>
       <div className="mx-auto max-w-7xl relative z-10">
         <div className="text-center mb-20">
           <h2 id="features" className="text-pretty text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
@@ -76,24 +69,26 @@ export default function Features() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {items.map((f, index) => (
             <div key={f.title} className="group relative">
-              <div className="rounded-3xl border border-primary/20 p-8 bg-white/90 backdrop-blur-md hover:shadow-xl transition-all duration-500 hover:border-primary/40 hover:-translate-y-3 hover:bg-white/95">
-                <div className="relative">
-                  <div className="w-20 h-20 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-2xl flex items-center justify-center mb-6 group-hover:from-primary/25 group-hover:to-secondary/25 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
-                    <f.icon className="h-10 w-10 text-primary group-hover:text-primary/90" aria-hidden="true" />
+              <div 
+                className="rounded-3xl p-8 transition-all duration-500 hover:-translate-y-3 border feature-card-hover" 
+                style={{ 
+                  backgroundColor: '#3E160C',
+                  borderColor: 'rgba(164, 134, 61, 0.3)',
+                  borderWidth: '1px'
+                }}
+              >
+                <div className="relative flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 mx-auto">
+                    <f.icon className="h-10 w-10 transition-colors duration-300" style={{ color: '#a4863d' }} aria-hidden="true" />
                   </div>
                   <div className="mb-4">
-                    <span className="inline-block bg-gradient-to-r from-primary/15 to-secondary/15 text-primary px-4 py-2 rounded-full text-sm font-bold mb-3 border border-primary/20 group-hover:from-primary/25 group-hover:to-secondary/25 transition-all duration-300">
+                    <span className="inline-block px-4 py-2 rounded-full text-sm font-bold mb-3 border transition-all duration-300" style={{ color: '#a4863d', borderColor: '#a4863d' }}>
                       {f.highlight}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors duration-300 group-hover:drop-shadow-sm">{f.title}</h3>
-                  <p className="text-foreground/70 leading-relaxed font-medium group-hover:text-foreground/80 transition-colors duration-300">{f.desc}</p>
+                  <h3 className="text-xl font-bold mb-3 transition-colors duration-300" style={{ color: '#a4863d' }}>{f.title}</h3>
+                  <p className="leading-relaxed font-medium transition-colors duration-300" style={{ color: '#a4863d' }}>{f.desc}</p>
                 </div>
-                
-                {/* Enhanced decorative elements */}
-                <div className="absolute top-4 right-4 w-3 h-3 bg-gradient-to-br from-primary/30 to-secondary/30 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110"></div>
-                <div className="absolute bottom-4 left-4 w-2 h-2 bg-gradient-to-br from-secondary/30 to-primary/30 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110"></div>
-                <div className="absolute top-1/2 right-2 w-1 h-1 bg-primary/40 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
               </div>
             </div>
           ))}
@@ -114,24 +109,24 @@ export default function Features() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
             <div key={testimonial.name} className="group">
-              <div className="rounded-3xl border border-primary/20 p-8 bg-white/90 backdrop-blur-md hover:shadow-xl transition-all duration-500 hover:border-primary/40 hover:-translate-y-2 hover:bg-white/95">
+              <div className="rounded-3xl p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2" style={{ backgroundColor: '#050A30' }}>
                 <div className="flex items-center mb-6">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <div key={i} className="w-5 h-5 bg-gradient-to-r from-primary to-secondary rounded-full mr-1 shadow-sm"></div>
+                    <div key={i} className="w-5 h-5 rounded-full mr-1 shadow-sm" style={{ backgroundColor: '#d4af37' }}></div>
                   ))}
                 </div>
-                <p className="text-foreground/80 leading-relaxed mb-6 italic font-medium text-lg">
+                <p className="leading-relaxed mb-6 italic font-medium text-lg" style={{ color: '#d4af37' }}>
                   "{testimonial.content}"
                 </p>
                 <div className="flex items-center">
-                  <div className="w-14 h-14 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-full flex items-center justify-center mr-4 border border-primary/20 group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-primary font-bold text-xl">
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center mr-4 border group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: '#d4af37', borderColor: '#d4af37' }}>
+                    <span className="font-bold text-xl text-white">
                       {testimonial.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors duration-300">{testimonial.name}</div>
-                    <div className="text-sm text-foreground/60 font-medium">{testimonial.role}</div>
+                    <div className="font-bold text-lg transition-colors duration-300" style={{ color: '#d4af37' }}>{testimonial.name}</div>
+                    <div className="text-sm font-medium" style={{ color: '#d4af37', opacity: 0.9 }}>{testimonial.role}</div>
                   </div>
                 </div>
               </div>

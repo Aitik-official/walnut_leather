@@ -9,22 +9,45 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Upload, Image, Video, Package, Save, Eye, Trash2, Plus, Edit, Eye as ViewIcon } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Upload, Image, Video, Package, Save, Eye, Trash2, Plus, Edit, Eye as ViewIcon, BarChart3, Users, ShoppingCart, Search, Truck, DollarSign, FolderTree } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import AdminAuthModal from "@/components/admin-auth-modal"
+import CategoryManagement from "@/components/category-management"
 
 interface ProductFormData {
   name: string
   description: string
   price: number
   category: string
+  mainCategory: string
+  subCategory: string
   availableSizes: string[]
   color: string
   material: string
   stock: number
   featured: boolean
+  featuredNickname?: string
   images: File[]
   videos: File[]
+  imageUrls: string[]
+  videoUrls: string[]
+  exclusive: boolean
+  limitedTimeDeal: boolean
+}
+
+interface MainCategory {
+  _id: string
+  name: string
+  image: string
+}
+
+interface SubCategory {
+  _id: string
+  name: string
+  mainCategory: string
+  image: string
 }
 
 interface DatabaseProduct {
@@ -33,13 +56,66 @@ interface DatabaseProduct {
   description: string
   price: number
   category: string
+  mainCategory?: string
+  subCategory?: string
   availableSizes?: string[]
   color?: string
   material?: string
   stock: number
   featured: boolean
+  featuredNickname?: string
   images: string[]
   videos: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface OrderItem {
+  productId: string
+  name: string
+  price: number
+  quantity: number
+  image: string
+}
+
+interface OrderCustomer {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+}
+
+interface OrderShipping {
+  address: string
+  apartment?: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+}
+
+interface OrderPayment {
+  method: string
+  last4: string
+}
+
+interface OrderTotals {
+  subtotal: number
+  tax: number
+  shipping: number
+  total: number
+}
+
+interface Order {
+  _id: string
+  orderId: string
+  items: OrderItem[]
+  customer: OrderCustomer
+  shipping: OrderShipping
+  payment: OrderPayment
+  totals: OrderTotals
+  notes?: string
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   createdAt: string
   updatedAt: string
 }
@@ -63,11 +139,14 @@ export default function DashboardPage() {
     description: "",
     price: 0,
     category: "",
+    mainCategory: "",
+    subCategory: "",
     availableSizes: [],
     color: "",
     material: "",
     stock: 0,
     featured: false,
+    featuredNickname: "",
     exclusive: false,
     limitedTimeDeal: false,
     images: [],
@@ -75,16 +154,76 @@ export default function DashboardPage() {
     imageUrls: [],
     videoUrls: []
   })
+  const [mainCategories, setMainCategories] = useState<MainCategory[]>([])
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([])
+  const [availableSubCategories, setAvailableSubCategories] = useState<SubCategory[]>([])
   
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [imageUrlInput, setImageUrlInput] = useState("")
   const [videoUrlInput, setVideoUrlInput] = useState("")
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
     checkAdminAuth()
+    fetchCategories()
   }, [])
+
+  useEffect(() => {
+    // Update available sub categories when main category changes
+    if (formData.mainCategory) {
+      const filtered = subCategories.filter(sub => sub.mainCategory === formData.mainCategory)
+      setAvailableSubCategories(filtered)
+      // Reset sub category if current one doesn't belong to selected main category
+      if (formData.subCategory && !filtered.find(sub => sub.name === formData.subCategory)) {
+        setFormData(prev => ({ ...prev, subCategory: "" }))
+      }
+    } else {
+      setAvailableSubCategories([])
+    }
+  }, [formData.mainCategory, subCategories])
+
+  // Refresh categories when form modals open and when editing product
+  useEffect(() => {
+    if (showAddForm || showEditForm) {
+      fetchCategories()
+    }
+  }, [showAddForm, showEditForm])
+
+  // Update available sub categories when editing product with main category
+  useEffect(() => {
+    if (editingProduct && formData.mainCategory) {
+      const filtered = subCategories.filter(sub => sub.mainCategory === formData.mainCategory)
+      setAvailableSubCategories(filtered)
+    }
+  }, [editingProduct, formData.mainCategory, subCategories])
+
+  const fetchCategories = async () => {
+    try {
+      const [mainRes, subRes] = await Promise.all([
+        fetch('/api/categories/main'),
+        fetch('/api/categories/sub')
+      ])
+      
+      const mainData = await mainRes.json()
+      const subData = await subRes.json()
+      
+      if (mainData.success) {
+        setMainCategories(mainData.categories || [])
+      }
+      
+      if (subData.success) {
+        setSubCategories(subData.subCategories || [])
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
 
   const checkAdminAuth = async () => {
     try {
@@ -94,11 +233,71 @@ export default function DashboardPage() {
       if (data.success && data.user) {
         setIsAuthenticated(true)
         fetchProducts()
+        fetchOrders()
       } else {
         setShowAuthModal(true)
       }
     } catch (error) {
       setShowAuthModal(true)
+    }
+  }
+
+  const fetchOrders = async (status?: string) => {
+    try {
+      setOrdersLoading(true)
+      const params = new URLSearchParams()
+      if (status && status !== 'all') params.append('status', status)
+      params.append('limit', '50')
+      
+      const response = await fetch(`/api/orders?${params.toString()}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setOrders(data.orders || [])
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch orders",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch orders",
+        variant: "destructive"
+      })
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status)
+    fetchOrders(status === 'all' ? undefined : status)
+  }
+
+  const filteredOrders = orders.filter(order => {
+    if (!searchTerm) return true
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      order.orderId.toLowerCase().includes(searchLower) ||
+      order.customer.email.toLowerCase().includes(searchLower) ||
+      order.customer.firstName.toLowerCase().includes(searchLower) ||
+      order.customer.lastName.toLowerCase().includes(searchLower) ||
+      order.items.some(item => item.name.toLowerCase().includes(searchLower))
+    )
+  })
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'bg-green-100 text-green-800'
+      case 'processing': return 'bg-blue-100 text-blue-800'
+      case 'shipped': return 'bg-purple-100 text-purple-800'
+      case 'delivered': return 'bg-green-100 text-green-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -159,20 +358,37 @@ export default function DashboardPage() {
     setExistingVideos(product.videos || [])
     setRemovedImages([])
     setRemovedVideos([])
+    
+    // Parse category - support both old format (just category string) and new format (mainCategory/subCategory)
+    let mainCategory = product.mainCategory || ""
+    let subCategory = product.subCategory || ""
+    
+    // If mainCategory/subCategory don't exist, try to parse from category string
+    if (!mainCategory && !subCategory && product.category) {
+      const categoryParts = product.category.split('/')
+      mainCategory = categoryParts[0] || ""
+      subCategory = categoryParts[1] || ""
+    }
+    
     setFormData({
       name: product.name,
       description: product.description,
       price: product.price,
       category: product.category,
+      mainCategory: mainCategory,
+      subCategory: subCategory,
       availableSizes: product.availableSizes || [],
       color: product.color || "",
       material: product.material || "",
       stock: product.stock,
       featured: product.featured,
+      featuredNickname: product.featuredNickname || "",
       exclusive: product.exclusive || false,
       limitedTimeDeal: product.limitedTimeDeal || false,
       images: [],
-      videos: []
+      videos: [],
+      imageUrls: [],
+      videoUrls: []
     })
     setShowEditForm(true)
   }
@@ -319,16 +535,29 @@ export default function DashboardPage() {
     try {
       const formDataToSend = new FormData()
       
+      // Build hierarchical category string
+      let categoryString = formData.mainCategory
+      if (formData.subCategory) {
+        categoryString = `${formData.mainCategory}/${formData.subCategory}`
+      }
+      
       // Add text data
       formDataToSend.append('name', formData.name)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('price', formData.price.toString())
-      formDataToSend.append('category', formData.category)
+      formDataToSend.append('category', categoryString)
+      formDataToSend.append('mainCategory', formData.mainCategory)
+      if (formData.subCategory) {
+        formDataToSend.append('subCategory', formData.subCategory)
+      }
       formDataToSend.append('availableSizes', JSON.stringify(formData.availableSizes))
       formDataToSend.append('color', formData.color)
       formDataToSend.append('material', formData.material)
       formDataToSend.append('stock', formData.stock.toString())
       formDataToSend.append('featured', formData.featured.toString())
+      if (formData.featuredNickname) {
+        formDataToSend.append('featuredNickname', formData.featuredNickname)
+      }
       formDataToSend.append('exclusive', formData.exclusive.toString())
       formDataToSend.append('limitedTimeDeal', formData.limitedTimeDeal.toString())
 
@@ -382,6 +611,8 @@ export default function DashboardPage() {
           description: "",
           price: 0,
           category: "",
+          mainCategory: "",
+          subCategory: "",
           availableSizes: [],
           color: "",
           material: "",
@@ -427,24 +658,42 @@ export default function DashboardPage() {
     <div className="w-full h-full">
       {/* Page Header */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-16 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="features-gradient">Dashboard</span>
-            </h1>
-            <p className="text-muted-foreground">Manage your leather products</p>
-          </div>
-          <Button 
-            onClick={() => setShowAddForm(true)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">
+            <span className="features-gradient">Dashboard</span>
+          </h1>
+          <p className="text-muted-foreground">Manage your leather products and analytics</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Tabs */}
+        <Tabs defaultValue="analytics" className="w-full">
+          <TabsList className="grid w-full max-w-xl grid-cols-5 mb-8">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Products
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Orders
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderTree className="h-4 w-4" />
+              Categories
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Customers
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -501,114 +750,520 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+          </TabsContent>
 
-        {/* Products Table */}
-        <div>
-        <Card>
-        <CardHeader>
-          <CardTitle>Recent Products</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading products...</p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No products yet</h3>
-              <p className="text-muted-foreground mb-4">Get started by adding your first product</p>
-              <Button onClick={() => setShowAddForm(true)}>
+          {/* Products Tab */}
+          <TabsContent value="products" className="space-y-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Products</h2>
+                <p className="text-muted-foreground">Manage your product inventory</p>
+              </div>
+              <Button 
+                onClick={() => setShowAddForm(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>PRODUCT</TableHead>
-                  <TableHead>CATEGORY</TableHead>
-                  <TableHead>PRICE</TableHead>
-                  <TableHead>STATUS</TableHead>
-                  <TableHead>ACTIONS</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product._id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                          <img
-                            src={product.images[0] || "/placeholder.svg"}
-                            alt={product.name}
-                            className="w-full h-full object-cover rounded"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">ID: {product._id.slice(-8)}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">${product.price.toFixed(2)}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {product.featured && (
-                          <Badge variant="default" className="bg-green-100 text-green-800">NEW</Badge>
-                        )}
-                        {product.stock === 0 && (
-                          <Badge variant="destructive">OUT OF STOCK</Badge>
-                        )}
-                        {product.stock > 0 && product.stock < 5 && (
-                          <Badge variant="destructive" className="bg-red-100 text-red-800">LOW STOCK</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => window.open(`/products/${product._id}`, '_blank')}
-                          title="View Product"
-                        >
-                          <ViewIcon className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditProduct(product)}
-                          title="Edit Product"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteProduct(product._id)}
-                          title="Delete Product"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-        </Card>
-        </div>
+
+            {/* Products Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Product List</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading products...</p>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">No products yet</h3>
+                    <p className="text-muted-foreground mb-4">Get started by adding your first product</p>
+                    <Button onClick={() => setShowAddForm(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>PRODUCT</TableHead>
+                        <TableHead>CATEGORY</TableHead>
+                        <TableHead>PRICE</TableHead>
+                        <TableHead>STATUS</TableHead>
+                        <TableHead>ACTIONS</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product._id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-12 h-12 flex-shrink-0">
+                                <img
+                                  src={product.images[0] || "/placeholder.svg"}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover rounded"
+                                />
+                              </div>
+                              <div>
+                                <p className="font-medium">{product.name}</p>
+                                <p className="text-xs text-muted-foreground">ID: {product._id.slice(-8)}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{product.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">${product.price.toFixed(2)}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {product.featured && (
+                                <Badge variant="default" className="bg-green-100 text-green-800">NEW</Badge>
+                              )}
+                              {product.stock === 0 && (
+                                <Badge variant="destructive">OUT OF STOCK</Badge>
+                              )}
+                              {product.stock > 0 && product.stock < 5 && (
+                                <Badge variant="destructive" className="bg-red-100 text-red-800">LOW STOCK</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => window.open(`/products/${product._id}`, '_blank')}
+                                title="View Product"
+                              >
+                                <ViewIcon className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditProduct(product)}
+                                title="Edit Product"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteProduct(product._id)}
+                                title="Delete Product"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Orders Tab */}
+          <TabsContent value="orders" className="space-y-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Orders</h2>
+                <p className="text-muted-foreground">Manage customer orders and track fulfillment</p>
+              </div>
+              <Button 
+                onClick={() => fetchOrders()}
+                variant="outline"
+                className="bg-primary hover:bg-primary/90 text-white"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Refresh Orders
+              </Button>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <ShoppingCart className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Orders</p>
+                      <p className="text-2xl font-bold">{orders.length}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Package className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Confirmed</p>
+                      <p className="text-2xl font-bold">{orders.filter(o => o.status === 'confirmed').length}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Truck className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Shipped</p>
+                      <p className="text-2xl font-bold">{orders.filter(o => o.status === 'shipped').length}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Revenue</p>
+                      <p className="text-2xl font-bold">${orders.reduce((sum, order) => sum + order.totals.total, 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters and Search */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="search-orders" className="sr-only">Search orders</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="search-orders"
+                        placeholder="Search by order ID, customer name, or email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:w-48">
+                    <Label htmlFor="status-filter">Filter by Status</Label>
+                    <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Orders Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>
+                  Manage and track all customer orders
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {ordersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading orders...</p>
+                  </div>
+                ) : filteredOrders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">No orders found</h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm || statusFilter !== 'all'
+                        ? "No orders match your search criteria" 
+                        : "No orders have been placed yet"
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ORDER</TableHead>
+                        <TableHead>CUSTOMER</TableHead>
+                        <TableHead>ITEMS</TableHead>
+                        <TableHead>TOTAL</TableHead>
+                        <TableHead>STATUS</TableHead>
+                        <TableHead>DATE</TableHead>
+                        <TableHead>ACTIONS</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order._id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">#{order.orderId}</p>
+                              <p className="text-xs text-muted-foreground">ID: {order._id.slice(-8)}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{order.customer.firstName} {order.customer.lastName}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer.email}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer.phone}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {order.items.reduce((sum, item) => sum + item.quantity, 0)} total qty
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">${order.totals.total.toFixed(2)}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(order.status)}>
+                              <span className="flex items-center gap-1">
+                                <Package className="h-4 w-4" />
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(order.createdAt).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => setSelectedOrder(order)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Order Details - #{order.orderId}</DialogTitle>
+                                  <DialogDescription>
+                                    Complete order information and customer details
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                {selectedOrder && (
+                                  <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <Card>
+                                        <CardHeader>
+                                          <CardTitle className="text-lg">Order Information</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-2">
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Order ID:</span>
+                                            <span className="font-mono">#{selectedOrder.orderId}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Status:</span>
+                                            <Badge className={getStatusColor(selectedOrder.status)}>
+                                              {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                                            </Badge>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Order Date:</span>
+                                            <span>{new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Last Updated:</span>
+                                            <span>{new Date(selectedOrder.updatedAt).toLocaleDateString()}</span>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+
+                                      <Card>
+                                        <CardHeader>
+                                          <CardTitle className="text-lg">Payment Information</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-2">
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Method:</span>
+                                            <span>{selectedOrder.payment.method.toUpperCase()}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Card:</span>
+                                            <span>**** {selectedOrder.payment.last4}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Subtotal:</span>
+                                            <span>${selectedOrder.totals.subtotal.toFixed(2)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Tax:</span>
+                                            <span>${selectedOrder.totals.tax.toFixed(2)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Shipping:</span>
+                                            <span>${selectedOrder.totals.shipping.toFixed(2)}</span>
+                                          </div>
+                                          <div className="flex justify-between font-semibold text-lg">
+                                            <span>Total:</span>
+                                            <span>${selectedOrder.totals.total.toFixed(2)}</span>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <Users className="h-5 w-5" />
+                                          Customer Information
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <h4 className="font-medium mb-2">Billing Details</h4>
+                                            <div className="space-y-1 text-sm">
+                                              <p><strong>Name:</strong> {selectedOrder.customer.firstName} {selectedOrder.customer.lastName}</p>
+                                              <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
+                                              <p><strong>Phone:</strong> {selectedOrder.customer.phone}</p>
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <h4 className="font-medium mb-2">Shipping Address</h4>
+                                            <div className="space-y-1 text-sm">
+                                              <p>{selectedOrder.shipping.address}</p>
+                                              {selectedOrder.shipping.apartment && <p>{selectedOrder.shipping.apartment}</p>}
+                                              <p>{selectedOrder.shipping.city}, {selectedOrder.shipping.state} {selectedOrder.shipping.zipCode}</p>
+                                              <p>{selectedOrder.shipping.country}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <Package className="h-5 w-5" />
+                                          Order Items
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="space-y-4">
+                                          {selectedOrder.items.map((item, index) => (
+                                            <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                                              <div className="relative w-16 h-16 flex-shrink-0">
+                                                <img
+                                                  src={item.image}
+                                                  alt={item.name}
+                                                  className="w-full h-full object-cover rounded"
+                                                />
+                                              </div>
+                                              <div className="flex-1">
+                                                <h4 className="font-medium">{item.name}</h4>
+                                                <p className="text-sm text-muted-foreground">Product ID: {item.productId}</p>
+                                              </div>
+                                              <div className="text-right">
+                                                <p className="font-medium">${item.price.toFixed(2)}</p>
+                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                                <p className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    {selectedOrder.notes && (
+                                      <Card>
+                                        <CardHeader>
+                                          <CardTitle className="text-lg">Order Notes</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                          <p className="text-sm">{selectedOrder.notes}</p>
+                                        </CardContent>
+                                      </Card>
+                                    )}
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories" className="space-y-8">
+            <CategoryManagement />
+          </TabsContent>
+
+          {/* Customers Tab */}
+          <TabsContent value="customers" className="space-y-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">Customers</h2>
+              <p className="text-muted-foreground">Manage your customer database</p>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer List</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">Customer Management</h3>
+                  <p className="text-muted-foreground">Customer management features coming soon</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add Product Form Modal */}
@@ -680,19 +1335,50 @@ export default function DashboardPage() {
               {/* Product Details */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                  <Label htmlFor="mainCategory">Main Category *</Label>
+                  <Select 
+                    value={formData.mainCategory} 
+                    onValueChange={(value) => {
+                      handleInputChange('mainCategory', value)
+                      handleInputChange('subCategory', '') // Reset sub category
+                    }}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Select main category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="jackets">Jackets</SelectItem>
-                      <SelectItem value="bags">Bags</SelectItem>
-                      <SelectItem value="wallets">Wallets</SelectItem>
-                      <SelectItem value="belts">Belts</SelectItem>
-                      <SelectItem value="accessories">Accessories</SelectItem>
+                      {mainCategories.map((cat) => (
+                        <SelectItem key={cat._id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subCategory">Sub Category (Jacket Type) *</Label>
+                  <Select 
+                    value={formData.subCategory} 
+                    onValueChange={(value) => handleInputChange('subCategory', value)}
+                    disabled={!formData.mainCategory || availableSubCategories.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={!formData.mainCategory ? "Select main category first" : "Select jacket type"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSubCategories.map((subCat) => (
+                        <SelectItem key={subCat._id} value={subCat.name}>
+                          {subCat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!formData.mainCategory && (
+                    <p className="text-xs text-muted-foreground">Select main category first</p>
+                  )}
+                  {formData.mainCategory && availableSubCategories.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No sub categories available. Create one in Categories tab.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Available Sizes</Label>
@@ -791,16 +1477,29 @@ export default function DashboardPage() {
                 <Label className="text-base font-medium">Product Tags</Label>
                 
                 {/* Featured Toggle */}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    checked={formData.featured}
-                    onChange={(e) => handleInputChange('featured', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <Label htmlFor="featured">Featured Product</Label>
-                  {formData.featured && <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">Featured</Badge>}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="featured"
+                      checked={formData.featured}
+                      onChange={(e) => handleInputChange('featured', e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="featured">Featured Product</Label>
+                    {formData.featured && <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">Featured</Badge>}
+                  </div>
+                  {formData.featured && (
+                    <div className="ml-6">
+                      <Label htmlFor="featuredNickname">Short Name / Nickname (shown on hover)</Label>
+                      <Input
+                        id="featuredNickname"
+                        value={formData.featuredNickname || ''}
+                        onChange={(e) => handleInputChange('featuredNickname', e.target.value)}
+                        placeholder="e.g., Rider, Bomber, Aviator"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Exclusive Toggle */}
@@ -1059,6 +1758,14 @@ export default function DashboardPage() {
                   <div className={`w-2 h-2 rounded-full ${formData.description ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   {formData.description ? 'Description provided' : 'Description required'}
                 </div>
+                <div className={`flex items-center gap-2 ${formData.mainCategory ? 'text-green-600' : 'text-red-500'}`}>
+                  <div className={`w-2 h-2 rounded-full ${formData.mainCategory ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  {formData.mainCategory ? `Main category selected: ${formData.mainCategory}` : 'Main category required (Mens or Womens)'}
+                </div>
+                <div className={`flex items-center gap-2 ${formData.subCategory ? 'text-green-600' : 'text-red-500'}`}>
+                  <div className={`w-2 h-2 rounded-full ${formData.subCategory ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  {formData.subCategory ? `Sub category selected: ${formData.subCategory}` : 'Sub category required (jacket type)'}
+                </div>
                 <div className={`flex items-center gap-2 ${(formData.images.length > 0 || formData.imageUrls.length > 0) ? 'text-green-600' : 'text-red-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${(formData.images.length > 0 || formData.imageUrls.length > 0) ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   {(formData.images.length > 0 || formData.imageUrls.length > 0) 
@@ -1071,7 +1778,7 @@ export default function DashboardPage() {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isUploading || !formData.name || !formData.description || (formData.images.length === 0 && formData.imageUrls.length === 0)}
+                disabled={isUploading || !formData.name || !formData.description || !formData.mainCategory || !formData.subCategory || (formData.images.length === 0 && formData.imageUrls.length === 0)}
               >
                 {isUploading ? (
                   <>
@@ -1114,6 +1821,8 @@ export default function DashboardPage() {
           description: "",
           price: 0,
           category: "",
+          mainCategory: "",
+          subCategory: "",
           availableSizes: [],
           color: "",
           material: "",
@@ -1152,16 +1861,29 @@ export default function DashboardPage() {
                     try {
                       const formDataToSend = new FormData()
                       
+                      // Build hierarchical category string
+                      let categoryString = formData.mainCategory
+                      if (formData.subCategory) {
+                        categoryString = `${formData.mainCategory}/${formData.subCategory}`
+                      }
+                      
                       // Add text data
                       formDataToSend.append('name', formData.name)
                       formDataToSend.append('description', formData.description)
                       formDataToSend.append('price', formData.price.toString())
-                      formDataToSend.append('category', formData.category)
+                      formDataToSend.append('category', categoryString)
+                      formDataToSend.append('mainCategory', formData.mainCategory)
+                      if (formData.subCategory) {
+                        formDataToSend.append('subCategory', formData.subCategory)
+                      }
                       formDataToSend.append('availableSizes', JSON.stringify(formData.availableSizes))
                       formDataToSend.append('color', formData.color)
                       formDataToSend.append('material', formData.material)
                       formDataToSend.append('stock', formData.stock.toString())
                       formDataToSend.append('featured', formData.featured.toString())
+                      if (formData.featuredNickname) {
+                        formDataToSend.append('featuredNickname', formData.featuredNickname)
+                      }
                       formDataToSend.append('exclusive', formData.exclusive.toString())
                       formDataToSend.append('limitedTimeDeal', formData.limitedTimeDeal.toString())
 
@@ -1277,19 +1999,50 @@ export default function DashboardPage() {
                     {/* Product Details */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-category">Category *</Label>
-                        <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                        <Label htmlFor="edit-mainCategory">Main Category *</Label>
+                        <Select 
+                          value={formData.mainCategory} 
+                          onValueChange={(value) => {
+                            handleInputChange('mainCategory', value)
+                            handleInputChange('subCategory', '') // Reset sub category
+                          }}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Select main category" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="jackets">Jackets</SelectItem>
-                            <SelectItem value="bags">Bags</SelectItem>
-                            <SelectItem value="wallets">Wallets</SelectItem>
-                            <SelectItem value="belts">Belts</SelectItem>
-                            <SelectItem value="accessories">Accessories</SelectItem>
+                            {mainCategories.map((cat) => (
+                              <SelectItem key={cat._id} value={cat.name}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-subCategory">Sub Category (Jacket Type) *</Label>
+                        <Select 
+                          value={formData.subCategory} 
+                          onValueChange={(value) => handleInputChange('subCategory', value)}
+                          disabled={!formData.mainCategory || availableSubCategories.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={!formData.mainCategory ? "Select main category first" : "Select jacket type"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSubCategories.map((subCat) => (
+                              <SelectItem key={subCat._id} value={subCat.name}>
+                                {subCat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!formData.mainCategory && (
+                          <p className="text-xs text-muted-foreground">Select main category first</p>
+                        )}
+                        {formData.mainCategory && availableSubCategories.length === 0 && (
+                          <p className="text-xs text-muted-foreground">No sub categories available. Create one in Categories tab.</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-color">Color</Label>
@@ -1632,7 +2385,7 @@ export default function DashboardPage() {
                     <Button 
                       type="submit" 
                       className="w-full" 
-                      disabled={isUploading || !formData.name || !formData.description}
+                      disabled={isUploading || !formData.name || !formData.description || !formData.mainCategory || !formData.subCategory}
                     >
                       {isUploading ? (
                         <>

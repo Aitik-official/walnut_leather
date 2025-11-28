@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import Hero from "./hero"
 import DynamicProductGrid from "./dynamic-product-grid"
+import BestSellers from "./best-sellers"
 import Features from "./features"
 import Story from "./story"
 import Link from "next/link"
@@ -25,8 +26,8 @@ export default function HomePage() {
     <>
       <Hero />
       
-      <section aria-labelledby="products" className="px-6 md:px-10 lg:px-16 py-20">
-        <div className="mx-auto max-w-7xl">
+      <section aria-labelledby="products" className="px-4 md:px-8 lg:px-12 py-20">
+        <div className="mx-auto w-full max-w-[1800px]">
           <div className="text-center mb-16">
             <h2
               id="products"
@@ -40,7 +41,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <DynamicProductGrid onAddToCart={handleAddToCart} limit={4} />
+          <DynamicProductGrid onAddToCart={handleAddToCart} limit={5} />
           
           <div className="text-center mt-12">
             <Link href="/shop">
@@ -52,6 +53,26 @@ export default function HomePage() {
               </Button>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Best Sellers Section */}
+      <section aria-labelledby="best-sellers" className="px-4 md:px-8 lg:px-12 py-20 bg-background">
+        <div className="mx-auto w-full max-w-[1800px]">
+          <div className="text-center mb-16">
+            <h2
+              id="best-sellers"
+              className="text-pretty text-4xl md:text-5xl font-bold tracking-tight mb-4"
+            >
+              <span className="features-gradient">Our Best Sellers</span>
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+              Full‑grain leather jackets crafted to age beautifully. Built to last, designed to impress.
+              Each piece tells a story of craftsmanship and timeless style.
+            </p>
+          </div>
+          
+          <BestSellers />
         </div>
       </section>
       

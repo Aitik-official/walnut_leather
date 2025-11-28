@@ -127,7 +127,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orders,
+      data: orders,
+      orders, // Keep for backward compatibility
       pagination: {
         currentPage: page,
         totalPages,

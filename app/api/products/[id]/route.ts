@@ -57,16 +57,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const description = formData.get('description') as string
     const price = parseFloat(formData.get('price') as string)
     const category = formData.get('category') as string
+    const mainCategory = formData.get('mainCategory') as string || undefined
+    const subCategory = formData.get('subCategory') as string || undefined
     const availableSizes = JSON.parse(formData.get('availableSizes') as string || '[]')
     const color = formData.get('color') as string || ''
     const material = formData.get('material') as string || ''
     const stock = parseInt(formData.get('stock') as string || '0')
     const featured = formData.get('featured') === 'true'
+    const featuredNickname = formData.get('featuredNickname') as string || undefined
 
     // Validate required fields
-    if (!name || !description || !price || !category) {
+    if (!name || !description || !price || !mainCategory || !subCategory) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: name, description, price, mainCategory, and subCategory are required' },
         { status: 400 }
       )
     }
@@ -89,11 +92,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       description,
       price,
       category,
+      mainCategory,
+      subCategory,
       availableSizes,
       color,
       material,
       stock,
       featured,
+      featuredNickname,
       exclusive: formData.get('exclusive') === 'true',
       limitedTimeDeal: formData.get('limitedTimeDeal') === 'true',
       updatedAt: new Date()

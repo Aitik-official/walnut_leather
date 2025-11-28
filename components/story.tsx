@@ -31,9 +31,9 @@ const achievements = [
 
 export default function Story() {
   return (
-    <section id="story" aria-labelledby="our-story" className="px-6 md:px-10 lg:px-16 py-20 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-orange-50/40 relative overflow-hidden">
+    <section id="story" aria-labelledby="our-story" className="px-6 md:px-10 lg:px-16 py-20 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-orange-50/40 relative overflow-hidden" style={{ zIndex: 1 }}>
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5" style={{ zIndex: 0 }}>
         <div className="absolute top-20 left-20 w-32 h-32 bg-primary rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-40 h-40 bg-secondary rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-primary/20 rounded-full blur-3xl"></div>
@@ -58,9 +58,6 @@ export default function Story() {
               </div>
             </div>
             
-            {/* Floating elements */}
-            <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/10 rounded-full blur-xl"></div>
-            <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-secondary/10 rounded-full blur-xl"></div>
           </div>
           
           <div className="order-1 lg:order-2 space-y-8">

@@ -15,11 +15,14 @@ interface ProductData {
   description: string
   price: number
   category: string
+  mainCategory?: string
+  subCategory?: string
   availableSizes?: string[]
   color?: string
   material?: string
   stock: number
   featured: boolean
+  featuredNickname?: string
   exclusive: boolean
   limitedTimeDeal: boolean
   images: string[]
@@ -39,11 +42,14 @@ export async function POST(request: NextRequest) {
       description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string) || 0,
       category: formData.get('category') as string,
+      mainCategory: formData.get('mainCategory') as string || undefined,
+      subCategory: formData.get('subCategory') as string || undefined,
       availableSizes: JSON.parse(formData.get('availableSizes') as string) || [],
       color: formData.get('color') as string || '',
       material: formData.get('material') as string || '',
       stock: parseInt(formData.get('stock') as string) || 0,
       featured: formData.get('featured') === 'true',
+      featuredNickname: formData.get('featuredNickname') as string || undefined,
       exclusive: formData.get('exclusive') === 'true',
       limitedTimeDeal: formData.get('limitedTimeDeal') === 'true',
       images: [],
@@ -55,9 +61,9 @@ export async function POST(request: NextRequest) {
     console.log('Product data extracted:', productData)
 
     // Validate required fields
-    if (!productData.name || !productData.description || !productData.price || !productData.category) {
+    if (!productData.name || !productData.description || !productData.price || !productData.mainCategory || !productData.subCategory) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: name, description, price, mainCategory, and subCategory are required' },
         { status: 400 }
       )
     }

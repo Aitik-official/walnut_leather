@@ -23,6 +23,7 @@ import {
 import Link from "next/link"
 import { useCart } from "@/components/cart-context"
 import { useAuth } from "@/components/auth-context"
+import { useWishlist } from "@/components/wishlist-context"
 import { useToast } from "@/hooks/use-toast"
 import AuthModal from "@/components/auth-modal"
 
@@ -163,6 +164,7 @@ export default function ProductDetailsPage() {
   const params = useParams()
   const { add } = useCart()
   const { isAuthenticated } = useAuth()
+  const { addItem, removeItem, isInWishlist } = useWishlist()
   const { toast } = useToast()
   
   const [product, setProduct] = useState<Product | null>(null)
@@ -313,40 +315,122 @@ export default function ProductDetailsPage() {
       <div className="container mx-auto px-6 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Image Gallery */}
-          <div className="space-y-4">
-            {/* Main Image */}
-            <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-lg">
-              <img
-                src={product.images[selectedImage] || "/placeholder.svg"}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {/* Main Image */}
+              <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-lg">
+                <img
+                  src={product.images[selectedImage] || "/placeholder.svg"}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              {/* Thumbnail Gallery */}
+              <div className="flex space-x-2 overflow-x-auto">
+                {product.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedImage === index 
+                        ? "border-primary shadow-md" 
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <img
+                      src={image || "/placeholder.svg"}
+                      alt={`${product.name} view ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+                {product.images.length > 4 && (
+                  <button className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
             </div>
-            
-            {/* Thumbnail Gallery */}
-            <div className="flex space-x-2 overflow-x-auto">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedImage === index 
-                      ? "border-primary shadow-md" 
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.name} view ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-              {product.images.length > 4 && (
-                <button className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </button>
-              )}
+
+            {/* Reviews */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <span className="text-sm font-medium">5/5</span>
+                </div>
+                <p className="text-sm text-muted-foreground">12 reviews</p>
+                <p className="text-xs text-muted-foreground mt-1">Powered by LOOX</p>
+              </CardContent>
+            </Card>
+
+            {/* Additional Information Sections */}
+            <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+              <Collapsible>
+                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
+                  30 DAYS FREE EXCHANGE
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-6 py-4 bg-gray-50">
+                  <p className="text-sm text-gray-700">
+                    We offer a 30-day free exchange policy on all our leather products. If you're not completely satisfied with your purchase, you can exchange it for a different size, color, or style within 30 days of delivery. The item must be in original condition with tags attached.
+                  </p>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Collapsible>
+                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
+                  SHIPPING INFORMATION
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-6 py-4 bg-gray-50">
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <p><strong>Free Shipping:</strong> On all orders over $100</p>
+                    <p><strong>Standard Shipping:</strong> 3-5 business days ($9.99)</p>
+                    <p><strong>Express Shipping:</strong> 1-2 business days ($19.99)</p>
+                    <p><strong>International:</strong> 7-14 business days ($29.99)</p>
+                    <p className="text-xs text-gray-500 mt-2">*Shipping times may vary during peak seasons</p>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Collapsible>
+                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
+                  CARE DETAILS
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-6 py-4 bg-gray-50">
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <p><strong>Cleaning:</strong> Use a soft, dry cloth to remove dust and dirt. For deeper cleaning, use a leather cleaner specifically designed for your leather type.</p>
+                    <p><strong>Conditioning:</strong> Apply leather conditioner every 3-6 months to maintain suppleness and prevent cracking.</p>
+                    <p><strong>Storage:</strong> Store in a cool, dry place away from direct sunlight. Use a breathable garment bag for long-term storage.</p>
+                    <p><strong>Protection:</strong> Apply a leather protector spray to help repel water and stains.</p>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Collapsible>
+                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between text-sm font-medium uppercase tracking-wide">
+                  ASK A QUESTION
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-6 py-4 bg-gray-50">
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <p>Have a question about this product? Our customer service team is here to help!</p>
+                    <div className="space-y-2">
+                      <p><strong>Email:</strong> support@walnuttleather.com</p>
+                      <p><strong>Phone:</strong> 1-800-WALNUT-1</p>
+                      <p><strong>Live Chat:</strong> Available 9 AM - 6 PM EST</p>
+                    </div>
+                    <p className="text-xs text-gray-500">We typically respond within 2 hours during business hours.</p>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </div>
 
@@ -473,19 +557,48 @@ export default function ProductDetailsPage() {
                 <Button 
                   variant="outline" 
                   className="flex-1"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!isAuthenticated) {
                       setShowAuthModal(true)
-                    } else {
+                      return
+                    }
+
+                    if (!product) return
+
+                    try {
+                      const productId = product._id || (params.id as string)
+                      const isInList = isInWishlist(productId)
+                      
+                      if (isInList) {
+                        await removeItem(productId)
+                        toast({
+                          title: "Removed from wishlist",
+                          description: `${product.name} has been removed from your wishlist.`,
+                        })
+                      } else {
+                        await addItem(
+                          productId,
+                          product.name,
+                          product.price,
+                          product.images[0] || "/placeholder.svg",
+                          product.category
+                        )
+                        toast({
+                          title: "Added to wishlist",
+                          description: `${product.name} has been added to your wishlist.`,
+                        })
+                      }
+                    } catch (error: any) {
                       toast({
-                        title: "Added to wishlist",
-                        description: `${product.name} has been added to your wishlist.`,
+                        title: "Error",
+                        description: error.message || "Failed to update wishlist.",
+                        variant: "destructive",
                       })
                     }
                   }}
                 >
-                  <Heart className="w-4 h-4 mr-2" />
-                  Wishlist
+                  <Heart className={`w-4 h-4 mr-2 ${product && isInWishlist(product._id || (params.id as string)) ? 'fill-red-500 text-red-500' : ''}`} />
+                  {product && isInWishlist(product._id || (params.id as string)) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -497,23 +610,6 @@ export default function ProductDetailsPage() {
                 </Button>
               </div>
             </div>
-
-
-            {/* Reviews */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <span className="text-sm font-medium">5/5</span>
-                </div>
-                <p className="text-sm text-muted-foreground">12 reviews</p>
-                <p className="text-xs text-muted-foreground mt-1">Powered by LOOX</p>
-              </CardContent>
-            </Card>
 
             {/* Product Description */}
             <div className="space-y-4">
@@ -542,70 +638,6 @@ export default function ProductDetailsPage() {
                   </ul>
                 </div>
               </div>
-            </div>
-
-            {/* Additional Information Sections */}
-            <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
-              <Collapsible>
-                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
-                  30 DAYS FREE EXCHANGE
-                  <ChevronDown className="h-4 w-4" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 py-4 bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    We offer a 30-day free exchange policy on all our leather products. If you're not completely satisfied with your purchase, you can exchange it for a different size, color, or style within 30 days of delivery. The item must be in original condition with tags attached.
-                  </p>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible>
-                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
-                  SHIPPING INFORMATION
-                  <ChevronDown className="h-4 w-4" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 py-4 bg-gray-50">
-                  <div className="space-y-3 text-sm text-gray-700">
-                    <p><strong>Free Shipping:</strong> On all orders over $100</p>
-                    <p><strong>Standard Shipping:</strong> 3-5 business days ($9.99)</p>
-                    <p><strong>Express Shipping:</strong> 1-2 business days ($19.99)</p>
-                    <p><strong>International:</strong> 7-14 business days ($29.99)</p>
-                    <p className="text-xs text-gray-500 mt-2">*Shipping times may vary during peak seasons</p>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible>
-                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-200 flex items-center justify-between text-sm font-medium uppercase tracking-wide">
-                  CARE DETAILS
-                  <ChevronDown className="h-4 w-4" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 py-4 bg-gray-50">
-                  <div className="space-y-3 text-sm text-gray-700">
-                    <p><strong>Cleaning:</strong> Use a soft, dry cloth to remove dust and dirt. For deeper cleaning, use a leather cleaner specifically designed for your leather type.</p>
-                    <p><strong>Conditioning:</strong> Apply leather conditioner every 3-6 months to maintain suppleness and prevent cracking.</p>
-                    <p><strong>Storage:</strong> Store in a cool, dry place away from direct sunlight. Use a breathable garment bag for long-term storage.</p>
-                    <p><strong>Protection:</strong> Apply a leather protector spray to help repel water and stains.</p>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible>
-                <CollapsibleTrigger className="w-full px-6 py-4 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between text-sm font-medium uppercase tracking-wide">
-                  ASK A QUESTION
-                  <ChevronDown className="h-4 w-4" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 py-4 bg-gray-50">
-                  <div className="space-y-3 text-sm text-gray-700">
-                    <p>Have a question about this product? Our customer service team is here to help!</p>
-                    <div className="space-y-2">
-                      <p><strong>Email:</strong> support@walnuttleather.com</p>
-                      <p><strong>Phone:</strong> 1-800-WALNUT-1</p>
-                      <p><strong>Live Chat:</strong> Available 9 AM - 6 PM EST</p>
-                    </div>
-                    <p className="text-xs text-gray-500">We typically respond within 2 hours during business hours.</p>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
             </div>
           </div>
         </div>

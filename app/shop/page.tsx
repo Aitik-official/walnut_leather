@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { Filter, X, Search, SortAsc } from "lucide-react"
-import DynamicProductGrid from "@/components/dynamic-product-grid"
+import { Filter, X, Search, SortAsc, ChevronDown, ChevronUp } from "lucide-react"
+import ShopProductGrid from "@/components/shop-product-grid"
 
 interface FilterOptions {
   category: string
@@ -46,6 +46,27 @@ const SIZES = [
   { value: "custom", label: "Custom" }
 ]
 
+const COLORS = [
+  { value: "all", label: "All Colors" },
+  { value: "Walnut", label: "Walnut" },
+  { value: "Brown", label: "Brown" },
+  { value: "Black", label: "Black" },
+  { value: "Tan", label: "Tan" },
+  { value: "Cognac", label: "Cognac" },
+  { value: "Burgundy", label: "Burgundy" }
+]
+
+const MATERIALS = [
+  { value: "all", label: "All Materials" },
+  { value: "Full-grain Leather", label: "Full-grain Leather" },
+  { value: "Full-grain Walnut Leather", label: "Full-grain Walnut Leather" },
+  { value: "Full-grain Brown Leather", label: "Full-grain Brown Leather" },
+  { value: "Genuine Leather", label: "Genuine Leather" },
+  { value: "Suede", label: "Suede" },
+  { value: "Shearling", label: "Shearling" },
+  { value: "Leather with Shearling", label: "Leather with Shearling" }
+]
+
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
   { value: "price-low", label: "Price: Low to High" },
@@ -58,11 +79,12 @@ const SORT_OPTIONS = [
 export default function ShopPage() {
   const { toast } = useToast()
   const [showFilters, setShowFilters] = useState(false)
+  const [showPriceRange, setShowPriceRange] = useState(false)
   const [filters, setFilters] = useState<FilterOptions>({
     category: "all",
     size: "all",
-    color: "",
-    material: "",
+    color: "all",
+    material: "all",
     priceRange: [0, 1000],
     searchTerm: "",
     sortBy: "featured",
@@ -83,12 +105,12 @@ export default function ShopPage() {
     }))
   }
 
-  const clearFilters = () => {
+    const clearFilters = () => {
     setFilters({
       category: "all",
       size: "all",
-      color: "",
-      material: "",
+      color: "all",
+      material: "all",
       priceRange: [0, 1000],
       searchTerm: "",
       sortBy: "featured",
@@ -100,8 +122,8 @@ export default function ShopPage() {
     let count = 0
     if (filters.category !== "all") count++
     if (filters.size !== "all") count++
-    if (filters.color) count++
-    if (filters.material) count++
+    if (filters.color && filters.color !== "all") count++
+    if (filters.material && filters.material !== "all") count++
     if (filters.priceRange[0] !== 0 || filters.priceRange[1] !== 1000) count++
     if (filters.searchTerm) count++
     if (filters.showInStock) count++
@@ -110,22 +132,14 @@ export default function ShopPage() {
 
   return (
     <main className="bg-background text-foreground">
-      <section className="w-full border-b border-border">
-        <div className="mx-auto max-w-7xl px-2 md:px-4 lg:px-6 py-10 md:py-12">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-pretty"><span className="features-gradient">Shop</span></h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Discover timeless pieces crafted from premium walnut-brown leather.
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-2 md:px-4 lg:px-6 py-8 md:py-12">
+      <section className="mx-auto max-w-[1800px] px-4 md:px-8 lg:px-12 py-8 md:py-12">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Filters Sidebar - Left Side */}
-          <div className="lg:w-56 flex-shrink-0">
+          <div className="lg:w-64 flex-shrink-0">
             <Card className="sticky top-24 h-fit mr-0">
-              <CardHeader className="pb-3 px-4 pt-4">
-                <div className="flex items-center justify-between">
+              <CardContent className={`px-4 pt-3 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+                {/* Filters Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
                   <CardTitle className="text-base">Filters</CardTitle>
                   <div className="flex items-center gap-1">
                     {getActiveFiltersCount() > 0 && (
@@ -153,8 +167,8 @@ export default function ShopPage() {
                     )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className={`space-y-3 px-4 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+                
+                <div className="space-y-3">
                 {/* Search */}
                 <div className="space-y-1">
                   <Label htmlFor="search" className="text-sm">Search</Label>
@@ -206,43 +220,90 @@ export default function ShopPage() {
 
                 {/* Color Filter */}
                 <div className="space-y-2">
-                  <Label htmlFor="color">Color</Label>
-                  <Input
-                    id="color"
-                    placeholder="e.g., Brown, Black, Tan"
-                    value={filters.color}
-                    onChange={(e) => handleFilterChange('color', e.target.value)}
-                  />
+                  <Label>Color</Label>
+                  <Select value={filters.color || "all"} onValueChange={(value) => handleFilterChange('color', value)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COLORS.map((color) => (
+                        <SelectItem key={color.value} value={color.value}>
+                          {color.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Material Filter */}
                 <div className="space-y-2">
-                  <Label htmlFor="material">Material</Label>
-                  <Input
-                    id="material"
-                    placeholder="e.g., Genuine Leather, Suede"
-                    value={filters.material}
-                    onChange={(e) => handleFilterChange('material', e.target.value)}
-                  />
+                  <Label>Material</Label>
+                  <Select value={filters.material || "all"} onValueChange={(value) => handleFilterChange('material', value)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MATERIALS.map((material) => (
+                        <SelectItem key={material.value} value={material.value}>
+                          {material.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Price Range */}
                 <div className="space-y-2">
-                  <Label>Price Range</Label>
-                  <div className="space-y-4">
-                    <Slider
-                      value={filters.priceRange}
-                      onValueChange={(value) => handleFilterChange('priceRange', value)}
-                      max={1000}
-                      min={0}
-                      step={50}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>${filters.priceRange[0]}</span>
-                      <span>${filters.priceRange[1]}</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPriceRange(!showPriceRange)}
+                    className="flex items-center justify-between w-full text-sm font-medium hover:text-foreground transition-colors"
+                  >
+                    <Label className="cursor-pointer">Price Range</Label>
+                    {showPriceRange ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  {showPriceRange && (
+                    <div className="space-y-4 pt-2">
+                      <Slider
+                        value={filters.priceRange}
+                        onValueChange={(value) => handleFilterChange('priceRange', value)}
+                        max={1000}
+                        min={0}
+                        step={50}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>${filters.priceRange[0]}</span>
+                        <span>${filters.priceRange[1]}</span>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        {[
+                          { label: "Under $200", range: [0, 200] },
+                          { label: "$200 - $400", range: [200, 400] },
+                          { label: "$400 - $600", range: [400, 600] },
+                          { label: "Over $600", range: [600, 1000] }
+                        ].map((priceRange) => (
+                          <Button
+                            key={priceRange.label}
+                            variant={
+                              filters.priceRange[0] === priceRange.range[0] && filters.priceRange[1] === priceRange.range[1]
+                                ? "default" 
+                                : "outline"
+                            }
+                            size="sm"
+                            onClick={() => handleFilterChange('priceRange', priceRange.range)}
+                            className="w-full justify-start text-xs"
+                          >
+                            {priceRange.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* In Stock Only */}
@@ -256,89 +317,6 @@ export default function ShopPage() {
                   />
                   <Label htmlFor="inStock" className="text-sm">In Stock Only</Label>
                 </div>
-
-                {/* Quick Filters */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Quick Filters</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={filters.category === "jackets" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFilterChange('category', filters.category === "jackets" ? "all" : "jackets")}
-                      className="text-xs"
-                    >
-                      Jackets
-                    </Button>
-                    <Button
-                      variant={filters.category === "bags" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFilterChange('category', filters.category === "bags" ? "all" : "bags")}
-                      className="text-xs"
-                    >
-                      Bags
-                    </Button>
-                    <Button
-                      variant={filters.category === "wallets" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFilterChange('category', filters.category === "wallets" ? "all" : "wallets")}
-                      className="text-xs"
-                    >
-                      Wallets
-                    </Button>
-                    <Button
-                      variant={filters.category === "belts" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFilterChange('category', filters.category === "belts" ? "all" : "belts")}
-                      className="text-xs"
-                    >
-                      Belts
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Price Ranges */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Price Ranges</Label>
-                  <div className="space-y-2">
-                    {[
-                      { label: "Under $200", range: [0, 200] },
-                      { label: "$200 - $400", range: [200, 400] },
-                      { label: "$400 - $600", range: [400, 600] },
-                      { label: "Over $600", range: [600, 1000] }
-                    ].map((priceRange) => (
-                      <Button
-                        key={priceRange.label}
-                        variant={
-                          filters.priceRange[0] === priceRange.range[0] && filters.priceRange[1] === priceRange.range[1]
-                            ? "default" 
-                            : "outline"
-                        }
-                        size="sm"
-                        onClick={() => handleFilterChange('priceRange', priceRange.range)}
-                        className="w-full justify-start text-xs"
-                      >
-                        {priceRange.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Size Quick Filters */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Popular Sizes</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["S", "M", "L", "XL"].map((size) => (
-                      <Button
-                        key={size}
-                        variant={filters.size === size ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleFilterChange('size', filters.size === size ? "all" : size)}
-                        className="text-xs"
-                      >
-                        {size}
-                      </Button>
-                    ))}
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -381,8 +359,7 @@ export default function ShopPage() {
               </Button>
             </div>
 
-            <DynamicProductGrid 
-              onAddToCart={handleAddToCart} 
+            <ShopProductGrid 
               filters={filters}
             />
           </div>

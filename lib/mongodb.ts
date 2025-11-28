@@ -84,5 +84,8 @@ export const COLLECTIONS = {
   PRODUCTS: 'products',
   USERS: 'users',
   ORDERS: 'orders',
-  CATEGORIES: 'categories'
+  CATEGORIES: 'categories',
+  MAIN_CATEGORIES: 'main_categories',
+  SUB_CATEGORIES: 'sub_categories',
+  WISHLIST: 'wishlist'
 } as const

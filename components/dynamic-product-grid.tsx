@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/components/cart-context"
 
@@ -25,6 +24,7 @@ type DatabaseProduct = {
   material?: string
   stock: number
   featured: boolean
+  featuredNickname?: string
   exclusive: boolean
   limitedTimeDeal: boolean
   description: string
@@ -42,6 +42,7 @@ type CombinedProduct = {
   material?: string
   stock?: number
   featured?: boolean
+  featuredNickname?: string
   exclusive?: boolean
   limitedTimeDeal?: boolean
   description?: string
@@ -97,6 +98,18 @@ const staticProducts: StaticProduct[] = [
     image: "/walnut-leather-blazer-studio-shot.jpg",
   },
 ]
+
+// Placeholder descriptions for static products
+const staticDescriptions: Record<string, string> = {
+  "rider": "Timeless design meets modern craftsmanship. This classic rider jacket features premium full-grain leather with hand-finished edges and solid brass hardware.",
+  "aviator": "Experience luxury with our shearling aviator jacket. Crafted from the finest materials, it combines warmth, comfort, and sophisticated style.",
+  "bomber": "A heritage-inspired bomber jacket that blends vintage aesthetics with contemporary comfort. Perfect for casual elegance.",
+  "moto": "Minimalist design philosophy meets exceptional quality. This moto jacket offers clean lines and unmatched durability.",
+  "field": "Built for the modern explorer. The field jacket combines rugged functionality with refined leather craftsmanship.",
+  "trucker": "Contemporary styling with classic appeal. This modern trucker jacket features premium materials and thoughtful details.",
+  "biker": "Urban sophistication meets motorcycle heritage. The city biker jacket is designed for the modern lifestyle.",
+  "blazer": "Elevate your wardrobe with this studio leather blazer. Professional elegance meets premium leather craftsmanship.",
+}
 
 interface FilterOptions {
   category: string
@@ -160,6 +173,7 @@ export default function DynamicProductGrid({
         material: product.material,
         stock: product.stock,
         featured: product.featured,
+        featuredNickname: product.featuredNickname,
         exclusive: product.exclusive,
         limitedTimeDeal: product.limitedTimeDeal,
         description: product.description
@@ -167,7 +181,8 @@ export default function DynamicProductGrid({
     // Add static products after database products
     ...staticProducts.map(product => ({
       ...product,
-      source: 'static' as const
+      source: 'static' as const,
+      description: staticDescriptions[product.id] || "Premium full‑grain leather, hand‑finished with premium hardware."
     }))
   ]
 
@@ -257,19 +272,18 @@ export default function DynamicProductGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-10">
-        {[...Array(limit || 8)].map((_, i) => (
-          <Card key={i} className="animate-pulse p-0">
-            <div className="aspect-[4/5] w-full bg-gray-200"></div>
-            <CardContent className="p-6 space-y-4">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-            </CardContent>
-            <CardFooter className="p-6 pt-0">
-              <div className="h-10 bg-gray-200 rounded w-full"></div>
-            </CardFooter>
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Top row - 2 cards skeleton */}
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="lg:col-span-6 aspect-[4/3.5] rounded-lg bg-gray-200 animate-pulse overflow-hidden">
+            <div className="h-full w-full bg-gray-300"></div>
+          </div>
+        ))}
+        {/* Bottom row - 3 cards skeleton */}
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="lg:col-span-4 aspect-[4/3.5] rounded-lg bg-gray-200 animate-pulse overflow-hidden">
+            <div className="h-full w-full bg-gray-300"></div>
+          </div>
         ))}
       </div>
     )
@@ -293,111 +307,61 @@ export default function DynamicProductGrid({
         </div>
       )}
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-10">
-        {combinedProducts.map((p) => (
-          <Card key={p.id} className="group border-border/50 hover:border-border hover:shadow-xl hover:bg-stone-50/90 hover:backdrop-blur-md transition-all duration-500 overflow-hidden bg-card/50 backdrop-blur-sm p-0">
-            <Link href={`/products/${p.id}`} className="block">
-              <div className="aspect-[4/5] w-full overflow-hidden cursor-pointer relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Top Row - 2 Cards (50% each) */}
+        {combinedProducts.slice(0, 2).map((p) => (
+          <article 
+            key={p.id} 
+            className="lg:col-span-6 group relative aspect-[4/3.5] overflow-hidden rounded-lg bg-gray-50 shadow-lg transition-transform duration-500 hover:-translate-y-1 cursor-pointer"
+          >
+            <Link href={`/products/${p.id}`} className="block h-full w-full">
+              <div className="relative h-full w-full flex items-center justify-center bg-gray-50">
                 <img
                   src={p.image || "/placeholder.svg?height=600&width=600&query=walnut%20leather%20jacket"}
                   alt={`${p.name} in walnut brown leather`}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  loading="lazy"
+                  className="max-h-full max-w-full h-auto w-auto object-contain transition-transform duration-700 group-hover:scale-110"
+                  loading="eager"
                 />
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* Product Tags - Priority order: Limited Deal > Exclusive > Featured > New */}
-                {p.limitedTimeDeal && (
-                  <div className="absolute top-4 left-4">
-                    <Badge 
-                      className="text-xs font-semibold bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 shadow-lg backdrop-blur-sm"
-                    >
-                      Limited Deal
-                    </Badge>
-                  </div>
-                )}
-
-                {!p.limitedTimeDeal && p.exclusive && (
-                  <div className="absolute top-4 left-4">
-                    <Badge 
-                      className="text-xs font-semibold bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0 shadow-lg backdrop-blur-sm"
-                    >
-                      Exclusive
-                    </Badge>
-                  </div>
-                )}
-
-                {!p.limitedTimeDeal && !p.exclusive && p.featured && (
-                  <div className="absolute top-4 left-4">
-                    <Badge 
-                      className="text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg backdrop-blur-sm"
-                    >
-                      Featured
-                    </Badge>
-                  </div>
-                )}
-
-                {/* New Badge - Only for database products that have no other tags */}
-                {p.source === 'database' && !p.featured && !p.exclusive && !p.limitedTimeDeal && (
-                  <div className="absolute top-4 left-4">
-                    <Badge 
-                      className="text-xs font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 shadow-lg backdrop-blur-sm"
-                    >
-                      ✨ New
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </Link>
-            
-            <CardContent className="p-6 space-y-4 group-hover:bg-stone-50/50 transition-colors duration-500">
-              <div className="space-y-2">
-                <Link href={`/products/${p.id}`}>
-                  <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300 cursor-pointer hover:underline">{p.name}</h3>
-                </Link>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {p.source === 'database' && p.description 
-                    ? p.description.substring(0, 80) + (p.description.length > 80 ? '...' : '')
-                    : "Full‑grain leather, hand‑finished with premium hardware."
-                  }
-                </p>
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-foreground">{p.price}</span>
-                <div className="flex items-center space-x-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-1 h-1 bg-primary rounded-full"></div>
-                  ))}
-                  <span className="text-xs text-muted-foreground ml-2">Premium</span>
+              <div className="absolute inset-0 flex items-start p-8 sm:p-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div>
+                  <h3 className="text-3xl font-bold uppercase tracking-tight text-foreground sm:text-4xl">
+                    {p.featured && p.featuredNickname ? p.featuredNickname : p.name}
+                  </h3>
+                  <span className="mt-4 block h-[4px] w-12 origin-left bg-[#785D32] transition-[width] duration-500 ease-out group-hover:w-40" />
                 </div>
               </div>
-            </CardContent>
-            
-            <CardFooter className="p-6 pt-0 group-hover:bg-stone-50/30 transition-colors duration-500">
-              <Button
-                onClick={() => {
-                  const price = p.source === 'static' 
-                    ? parseFloat(p.price.replace('$', ''))
-                    : parseFloat(p.price.replace('$', ''))
-                  
-                  add({
-                    id: p.id,
-                    name: p.name,
-                    price: price,
-                    image: p.image
-                  })
-                  onAddToCart(p.name)
-                }}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
-                aria-label={`Add ${p.name} to cart`}
-                disabled={p.source === 'database' && p.stock === 0}
-              >
-                {p.source === 'database' && p.stock === 0 ? 'Out of Stock' : 'Add to cart'}
-              </Button>
-            </CardFooter>
-          </Card>
+            </Link>
+          </article>
+        ))}
+
+        {/* Bottom Row - 3 Cards (33.33% each) */}
+        {combinedProducts.slice(2, 5).map((p) => (
+          <article 
+            key={p.id} 
+            className="lg:col-span-4 group relative aspect-[4/3.5] overflow-hidden rounded-lg bg-gray-50 shadow-lg transition-transform duration-500 hover:-translate-y-1 cursor-pointer"
+          >
+            <Link href={`/products/${p.id}`} className="block h-full w-full">
+              <div className="relative h-full w-full flex items-center justify-center bg-gray-50">
+                <img
+                  src={p.image || "/placeholder.svg?height=600&width=600&query=walnut%20leather%20jacket"}
+                  alt={`${p.name} in walnut brown leather`}
+                  className="max-h-full max-w-full h-auto w-auto object-contain transition-transform duration-700 group-hover:scale-110"
+                  loading="lazy"
+                />
+              </div>
+              
+              <div className="absolute inset-0 flex items-start p-8 sm:p-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div>
+                  <h3 className="text-3xl font-bold uppercase tracking-tight text-foreground sm:text-4xl">
+                    {p.featured && p.featuredNickname ? p.featuredNickname : p.name}
+                  </h3>
+                  <span className="mt-4 block h-[4px] w-12 origin-left bg-[#785D32] transition-[width] duration-500 ease-out group-hover:w-40" />
+                </div>
+              </div>
+            </Link>
+          </article>
         ))}
       </div>
     </div>

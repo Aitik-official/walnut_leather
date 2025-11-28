@@ -4,124 +4,137 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Light theme — Walnut Leather */
+/* Light theme — Premium Leather Collection */
 :root {
-  /* Colors from design brief */
-  --background: #ffffff;
-  /* Warm White */
-  --foreground: #4a4a4a;
-  /* Charcoal Gray */
+  /* Color Palette from Design */
+  /* Pale: #E8D9C4 - Light beige/cream */
+  /* Gold: #785D32 - Muted earthy gold/bronze */
+  /* Rough: #3E160C - Deep dark reddish-brown/mahogany */
+  /* Off-Navy: #050A30 - Very dark navy blue */
 
-  --card: #e5e5e5;
-  /* Soft Stone */
-  --card-foreground: #4b3d2d;
-  /* Walnut Brown */
+  --background: #F3F3F3;
+  /* Off-White background for whole website */
+  --foreground: #050A30;
+  /* Off-Navy for primary text */
+
+  --card: #E8D9C4;
+  /* Pale beige for card backgrounds */
+  --card-foreground: #050A30;
+  /* Off-Navy for card text */
 
   --popover: #ffffff;
-  /* Warm White */
-  --popover-foreground: #4a4a4a;
-  /* Charcoal Gray */
+  --popover-foreground: #050A30;
 
-  --primary: #4b3d2d;
-  /* Walnut Brown */
-  --primary-foreground: #ffffff;
-  /* Warm White */
+  --primary: #3E160C;
+  /* Rough - Deep mahogany for primary actions */
+  --primary-foreground: #E8D9C4;
+  /* Pale for contrast */
 
-  --secondary: #7e7b5a;
-  /* Deep Olive */
+  --secondary: #785D32;
+  /* Gold - Earthy bronze for secondary elements */
   --secondary-foreground: #ffffff;
-  /* Warm White */
+  /* White for contrast */
 
-  --muted: #e5e5e5;
-  /* Soft Stone */
-  --muted-foreground: #4a4a4a;
-  /* Charcoal Gray */
+  --muted: #F5EFE6;
+  /* Lighter pale for muted backgrounds */
+  --muted-foreground: #785D32;
+  /* Gold for muted text */
 
-  --accent: #7e7b5a;
-  /* Deep Olive */
+  --accent: #785D32;
+  /* Gold for accents */
   --accent-foreground: #ffffff;
-  /* Warm White */
 
-  --destructive: #ff4d4d;
-  /* Alert/Error */
+  --destructive: #D32F2F;
+  /* Professional red for errors */
   --destructive-foreground: #ffffff;
 
-  --border: #d1d5db;
-  /* Subtle border */
-  --input: #f3f4f6;
-  /* Input bg */
-  --ring: #4b3d2d;
-  /* Focus ring (Walnut) */
+  --border: #D4C5B0;
+  /* Soft pale border */
+  --input: #F5EFE6;
+  /* Light pale for inputs */
+  --ring: #785D32;
+  /* Gold focus ring */
 
-  /* Chart accents (kept for components compatibility) */
-  --chart-1: #f9c74f;
-  --chart-2: #f94144;
-  --chart-3: #f3722c;
-  --chart-4: #43aa8b;
-  --chart-5: #577590;
+  /* Chart accents */
+  --chart-1: #785D32;
+  /* Gold */
+  --chart-2: #3E160C;
+  /* Rough */
+  --chart-3: #8B6F47;
+  /* Lighter gold */
+  --chart-4: #5C4523;
+  /* Darker gold */
+  --chart-5: #050A30;
+  /* Off-Navy */
 
   --radius: 0.5rem;
 
   /* Sidebar */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #4a4a4a;
-  --sidebar-primary: #4b3d2d;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #7e7b5a;
+  --sidebar: #E8D9C4;
+  --sidebar-foreground: #050A30;
+  --sidebar-primary: #3E160C;
+  --sidebar-primary-foreground: #E8D9C4;
+  --sidebar-accent: #785D32;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #d1d5db;
-  --sidebar-ring: #4b3d2d;
+  --sidebar-border: #D4C5B0;
+  --sidebar-ring: #785D32;
 }
 
-/* Dark theme — balanced, accessible mapping */
+/* Dark theme — Premium Leather Dark Mode */
 .dark {
-  --background: #1b1b1b;
-  /* Deep charcoal */
-  --foreground: #f5f5f5;
-  /* Near white */
+  --background: #050A30;
+  /* Off-Navy as dark background */
+  --foreground: #E8D9C4;
+  /* Pale for light text */
 
-  --card: #222222;
-  --card-foreground: #f5f5f5;
+  --card: #1A1F3D;
+  /* Darker navy for cards */
+  --card-foreground: #E8D9C4;
 
-  --popover: #1e1e1e;
-  --popover-foreground: #f5f5f5;
+  --popover: #1A1F3D;
+  --popover-foreground: #E8D9C4;
 
-  --primary: #4b3d2d;
-  /* Walnut Brown */
-  --primary-foreground: #ffffff;
+  --primary: #785D32;
+  /* Gold for primary actions in dark mode */
+  --primary-foreground: #E8D9C4;
 
-  --secondary: #7e7b5a;
-  /* Deep Olive */
-  --secondary-foreground: #ffffff;
+  --secondary: #3E160C;
+  /* Rough for secondary */
+  --secondary-foreground: #E8D9C4;
 
-  --muted: #2a2a2a;
-  --muted-foreground: #d1d5db;
+  --muted: #0F1626;
+  /* Very dark navy for muted */
+  --muted-foreground: #B8A893;
+  /* Muted pale */
 
-  --accent: #7e7b5a;
-  /* Deep Olive */
-  --accent-foreground: #ffffff;
+  --accent: #785D32;
+  /* Gold accents */
+  --accent-foreground: #E8D9C4;
 
-  --destructive: #e74545;
+  --destructive: #E57373;
+  /* Softer red for dark mode */
   --destructive-foreground: #ffffff;
 
-  --border: #2a2a2a;
-  --input: #262626;
-  --ring: #4b3d2d;
+  --border: #2A3450;
+  /* Dark border */
+  --input: #1A1F3D;
+  --ring: #785D32;
 
-  --chart-1: #e3b744;
-  --chart-2: #d63e3e;
-  --chart-3: #d06528;
-  --chart-4: #3c937c;
-  --chart-5: #4d6b82;
+  --chart-1: #785D32;
+  --chart-2: #B8A893;
+  /* Lighter pale */
+  --chart-3: #8B6F47;
+  --chart-4: #5C4523;
+  --chart-5: #E8D9C4;
 
-  --sidebar: #1e1e1e;
-  --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #4b3d2d;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #7e7b5a;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2a2a2a;
-  --sidebar-ring: #4b3d2d;
+  --sidebar: #0F1626;
+  --sidebar-foreground: #E8D9C4;
+  --sidebar-primary: #785D32;
+  --sidebar-primary-foreground: #E8D9C4;
+  --sidebar-accent: #3E160C;
+  --sidebar-accent-foreground: #E8D9C4;
+  --sidebar-border: #2A3450;
+  --sidebar-ring: #785D32;
 }
 
 @theme inline {
@@ -185,8 +198,8 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(circle at 25% 25%, rgba(75, 61, 45, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 75% 75%, rgba(126, 123, 90, 0.02) 0%, transparent 50%);
+      radial-gradient(circle at 25% 25%, rgba(120, 93, 50, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(62, 22, 12, 0.02) 0%, transparent 50%);
     background-size: 400px 400px;
     background-position: 0 0, 200px 200px;
   }
@@ -224,20 +237,20 @@
 
   /* Enhanced shadows */
   .shadow-glow {
-    box-shadow: 0 0 20px rgba(75, 61, 45, 0.1);
+    box-shadow: 0 0 20px rgba(62, 22, 12, 0.1);
   }
 
   .shadow-glow-hover:hover {
-    box-shadow: 0 0 30px rgba(75, 61, 45, 0.2);
+    box-shadow: 0 0 30px rgba(120, 93, 50, 0.2);
   }
 
-  /* Silver gradient animation for hero title words */
+  /* Premium gradient animation for hero title words */
   .silver-gradient {
     background: linear-gradient(45deg,
-        #461248 0%,
-        #a93747 33%,
-        #f2a15f 66%,
-        #ffd6b6 100%);
+        #050A30 0%,
+        #3E160C 33%,
+        #785D32 66%,
+        #E8D9C4 100%);
     background-size: 200% 200%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -322,3 +335,57 @@
     background-position: -200% 0;
   }
 }
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease-out;
+}
+
+/* Footer - Remove any diagonal lines or background patterns */
+footer#contact,
+footer#contact::before,
+footer#contact::after,
+footer#contact *::before,
+footer#contact *::after {
+  background-image: none !important;
+  background: #3E160C !important;
+  background-color: #3E160C !important;
+  border-image: none !important;
+  border-style: solid !important;
+  z-index: 100 !important;
+}
+
+footer#contact {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  z-index: 100 !important;
+}
+
+/* Reduce z-index of section background patterns so they stay behind footer */
+section::before,
+section::after,
+section > div[class*="absolute"] {
+  z-index: 0 !important;
+}
+
+/* Feature card hover effects with border and shadow */
+.feature-card-hover {
+  box-shadow: 0 1px 3px rgba(164, 134, 61, 0.1) !important;
+}
+
+  .feature-card-hover:hover {
+    border-color: rgba(164, 134, 61, 0.8) !important;
+    box-shadow: 0 4px 12px rgba(164, 134, 61, 0.4), 0 8px 24px rgba(164, 134, 61, 0.2) !important;
+  }

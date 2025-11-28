@@ -1,63 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  ShoppingCart, 
-  Settings,
-  BarChart3,
-  FileText,
-  User
-} from "lucide-react"
+import { User } from "lucide-react"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Products",
-    href: "/dashboard/products",
-    icon: Package,
-  },
-  {
-    name: "Orders",
-    href: "/dashboard/orders",
-    icon: ShoppingCart,
-  },
-  {
-    name: "Customers",
-    href: "/dashboard/customers",
-    icon: Users,
-  },
-  {
-    name: "Analytics",
-    href: "/dashboard/analytics",
-    icon: BarChart3,
-  },
-  {
-    name: "Reports",
-    href: "/dashboard/reports",
-    icon: FileText,
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-]
-
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const pathname = usePathname()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-orange-50/40">
@@ -90,32 +40,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </div>
       </header>
-
-      {/* Navigation Tabs */}
-      <nav className="sticky top-16 z-20 bg-white/90 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-16">
-          <div className="flex space-x-1 overflow-x-auto py-2">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-gray-100"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      </nav>
 
       {/* Main content */}
       <main className="flex-1">
