@@ -5,11 +5,9 @@ import Link from "next/link"
 import { Heart } from "lucide-react"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
-import { useAuth } from "@/components/auth-context"
 import { useCurrency } from "@/components/currency-context"
 import { useLanguage } from "@/components/language-context"
 import { useToast } from "@/hooks/use-toast"
-import AuthModal from "@/components/auth-modal"
 
 type StaticProduct = {
   id: string
@@ -136,13 +134,11 @@ export default function ShopProductGrid({
 }) {
   const { add } = useCart()
   const { addItem, removeItem, isInWishlist } = useWishlist()
-  const { isAuthenticated } = useAuth()
   const { formatPrice } = useCurrency()
   const { t } = useLanguage()
   const { toast } = useToast()
   const [databaseProducts, setDatabaseProducts] = useState<DatabaseProduct[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAuthModal, setShowAuthModal] = useState(false)
 
   useEffect(() => {
     fetchDatabaseProducts()
@@ -278,11 +274,6 @@ export default function ShopProductGrid({
   const toggleFavorite = async (product: CombinedProduct, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
 
     try {
       if (isInWishlist(product.id)) {
@@ -411,11 +402,6 @@ export default function ShopProductGrid({
           </Link>
         )
       })}
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => setShowAuthModal(false)}
-      />
     </div>
   )
 }

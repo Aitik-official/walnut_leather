@@ -2,18 +2,20 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
-export type Currency = 'USD' | 'EUR' | 'GBP'
+export type Currency = 'USD' | 'INR' | 'EUR' | 'GBP'
 
 // Currency conversion rates (from USD to target currency)
 // Products are stored in USD, so we convert from USD to the selected currency
 const CONVERSION_RATES: Record<Currency, number> = {
   USD: 1,
-  EUR: 0.92, // 1 USD ≈ 0.92 EUR (example rate - should be updated regularly)
-  GBP: 0.79, // 1 USD ≈ 0.79 GBP (example rate - should be updated regularly)
+  INR: 83.5,
+  EUR: 0.92,
+  GBP: 0.79,
 }
 
 const CURRENCY_SYMBOLS: Record<Currency, string> = {
   USD: '$',
+  INR: '₹',
   EUR: '€',
   GBP: '£',
 }
@@ -34,7 +36,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Load currency from localStorage
     const savedCurrency = localStorage.getItem('currency') as Currency | null
-    if (savedCurrency && ['USD', 'EUR', 'GBP'].includes(savedCurrency)) {
+    if (savedCurrency && ['USD', 'INR', 'EUR', 'GBP'].includes(savedCurrency)) {
       setCurrencyState(savedCurrency)
     }
   }, [])

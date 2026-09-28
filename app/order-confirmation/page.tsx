@@ -36,7 +36,9 @@ interface Shipping {
 
 interface Payment {
   method: string
-  last4: string
+  last4?: string
+  transactionId?: string
+  payerEmail?: string
 }
 
 interface Totals {

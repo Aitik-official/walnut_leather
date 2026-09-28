@@ -125,3 +125,37 @@ export function getOptimizedVideoUrl(
     quality
   })
 }
+
+// Function for compatibility with route handlers
+export async function uploadImageToCloudinary(
+  file: any,
+  folder: string = 'products',
+  resourceType: 'image' | 'video' = 'image'
+): Promise<{ secure_url: string; public_id?: string }> {
+  let buffer: Buffer
+  if (Buffer.isBuffer(file)) {
+    buffer = file
+  } else if (file && typeof file.arrayBuffer === 'function') {
+    const bytes = await file.arrayBuffer()
+    buffer = Buffer.from(bytes)
+  } else {
+    throw new Error('Invalid file format for upload')
+  }
+
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      {
+        resource_type: resourceType,
+        folder: `walnut_leathers/${folder}`,
+      },
+      (error, result) => {
+        if (error) reject(error)
+        else resolve({ secure_url: result?.secure_url || '', public_id: result?.public_id })
+      }
+    ).end(buffer)
+  })
+}
+
+export async function deleteImageFromCloudinary(publicId: string): Promise<void> {
+  return deleteImage(publicId)
+}

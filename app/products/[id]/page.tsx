@@ -558,11 +558,6 @@ export default function ProductDetailsPage() {
                   variant="outline" 
                   className="flex-1"
                   onClick={async () => {
-                    if (!isAuthenticated) {
-                      setShowAuthModal(true)
-                      return
-                    }
-
                     if (!product) return
 
                     try {

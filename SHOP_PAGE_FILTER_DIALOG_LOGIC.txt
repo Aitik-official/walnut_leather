@@ -1,0 +1,1246 @@
+================================================================================
+SHOP PAGE FILTER DIALOG - COMPLETE LOGIC AND FUNCTIONALITY
+TEXT FORMAT DOCUMENTATION
+================================================================================
+
+ROUTE: /shop
+COMPONENT: app/shop/page.tsx
+FILTER COMPONENT: Filter Sidebar (Card component)
+PRODUCT GRID: components/shop-product-grid.tsx
+
+================================================================================
+PART 1: FILTER DIALOG OVERVIEW
+================================================================================
+
+1.1 LOCATION AND LAYOUT
+-------------------------------------------------------------------------------
+
+Position: Left sidebar on desktop, collapsible card on mobile
+Layout: Two-column layout
+  - Left Column: Filters sidebar (256px width on desktop)
+  - Right Column: Products grid (flexible width)
+
+Container:
+- Card component with sticky positioning
+- Sticky top position: 96px (top-24)
+- Height: Fits content (h-fit)
+- Only visible on desktop by default
+- Collapsible on mobile
+
+1.2 RESPONSIVE BEHAVIOR
+-------------------------------------------------------------------------------
+
+Desktop (lg breakpoint and above):
+- Filters sidebar: Always visible (sticky)
+- Position: Left side of page
+- Width: 256px (lg:w-64)
+- No toggle button needed
+
+Mobile (below lg breakpoint):
+- Filters sidebar: Hidden by default
+- Toggle button: "Filters" button in header
+- Overlay/Collapse: Shows/hides filter card
+- Badge: Shows active filter count on button
+
+================================================================================
+PART 2: FILTER DIALOG STRUCTURE
+================================================================================
+
+2.1 FILTER HEADER
+-------------------------------------------------------------------------------
+
+Elements:
+1. Title: "Filters" (CardTitle)
+2. Active Filter Count Badge: Shows number of active filters
+   - Only visible when count > 0
+   - Displays numeric count (e.g., "3")
+   - Variant: secondary
+   - Small size (text-xs)
+3. Toggle Button (Mobile only):
+   - Icon: Filter icon
+   - Size: Small (h-3 w-3)
+   - Purpose: Show/hide filters on mobile
+4. Clear Filters Button:
+   - Icon: X icon
+   - Only visible when active filters count > 0
+   - Purpose: Reset all filters to default
+   - Size: Small (text-xs)
+
+2.2 FILTER FIELDS (IN ORDER)
+-------------------------------------------------------------------------------
+
+FIELD 1: Search
+FIELD 2: Category
+FIELD 3: Size
+FIELD 4: Color
+FIELD 5: Material
+FIELD 6: Price Range (Collapsible)
+FIELD 7: In Stock Only (Checkbox)
+
+2.3 SORT OPTIONS
+-------------------------------------------------------------------------------
+
+Location: Above products grid (not in filter sidebar)
+Type: Dropdown select
+Icon: SortAsc icon
+Options: 6 sorting options
+
+================================================================================
+PART 3: FILTER OPTIONS INTERFACE
+================================================================================
+
+3.1 FILTEROPTIONS INTERFACE
+-------------------------------------------------------------------------------
+
+TypeScript Interface:
+{
+  category: string
+  size: string
+  color: string
+  material: string
+  priceRange: number[] (array of 2 numbers: [min, max])
+  searchTerm: string
+  sortBy: string
+  showInStock: boolean
+  subCategory?: string (optional, for collection page)
+  mainCategory?: string (optional, for collection page)
+}
+
+3.2 DEFAULT FILTER VALUES
+-------------------------------------------------------------------------------
+
+Initial State:
+{
+  category: "all"
+  size: "all"
+  color: "all"
+  material: "all"
+  priceRange: [0, 1000]
+  searchTerm: ""
+  sortBy: "featured"
+  showInStock: false
+}
+
+================================================================================
+PART 4: FIELD 1 - SEARCH FILTER
+================================================================================
+
+4.1 SEARCH FIELD STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Text Input
+Label: "Search"
+Icon: Search icon (absolute positioned, left side)
+Placeholder: "Search..."
+Size: Small (h-8, text-sm)
+Value Binding: filters.searchTerm
+
+4.2 SEARCH FUNCTIONALITY
+-------------------------------------------------------------------------------
+
+User Input:
+- User types in search box
+- Real-time filtering as user types
+- Case-insensitive search
+
+Search Logic:
+- Searches in: Product name
+- Method: String includes (case-insensitive)
+- Example: "rider" matches "Classic Rider Jacket"
+
+Implementation:
+- onChange handler: Updates filters.searchTerm
+- Filter function: Checks if product.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+4.3 SEARCH BEHAVIOR
+-------------------------------------------------------------------------------
+
+- Real-time: Filters as user types
+- No debounce: Immediate filtering
+- Clearable: Empty string clears search filter
+- Combined with other filters: Works with all other filters simultaneously
+
+================================================================================
+PART 5: FIELD 2 - CATEGORY FILTER
+================================================================================
+
+5.1 CATEGORY DROPDOWN STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Select dropdown
+Label: "Category"
+Size: Small (h-8, text-sm)
+Options: Static array of categories
+
+5.2 CATEGORY OPTIONS
+-------------------------------------------------------------------------------
+
+Available Categories:
+1. "all" - "All Categories" (default)
+2. "jackets" - "Jackets"
+3. "bags" - "Bags"
+4. "wallets" - "Wallets"
+5. "belts" - "Belts"
+6. "accessories" - "Accessories"
+
+5.3 CATEGORY FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Value: "all" = Show all categories (no filter)
+- Value: specific category = Show only products in that category
+- Matching: Exact match with product.category field
+
+Implementation:
+- If filters.category !== "all":
+  * Check: product.category === filters.category
+  * If match: Include product
+  * If no match: Exclude product
+- If filters.category === "all": Include all products
+
+Special Cases:
+- Database products: Check product.category field
+- Static products: Default category is "jackets"
+- Hierarchical categories: For products with "Mens/Rider" format, checks full category string
+
+================================================================================
+PART 6: FIELD 3 - SIZE FILTER
+================================================================================
+
+6.1 SIZE DROPDOWN STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Select dropdown
+Label: "Size"
+Options: Standard sizes + Custom option
+
+6.2 SIZE OPTIONS
+-------------------------------------------------------------------------------
+
+Available Sizes:
+1. "all" - "All Sizes" (default)
+2. "XXS" - "XXS"
+3. "XS" - "XS"
+4. "S" - "S"
+5. "M" - "M"
+6. "L" - "L"
+7. "XL" - "XL"
+8. "2XL" - "2XL"
+9. "3XL" - "3XL"
+10. "4XL" - "4XL"
+11. "custom" - "Custom" (non-standard sizes)
+
+6.3 SIZE FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Value: "all" = Show all sizes (no filter)
+- Value: specific size = Show only products with that size available
+- Value: "custom" = Show only products with non-standard sizes
+
+Implementation:
+- If filters.size === "all": Include all products
+- If filters.size === "custom":
+  * Check: Product has availableSizes array
+  * Check: At least one size is NOT in standard sizes list
+  * Standard sizes: ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']
+  * If product has custom sizes: Include product
+  * If product has only standard sizes: Exclude product
+- If filters.size === specific size (e.g., "M"):
+  * Check: product.availableSizes array includes selected size
+  * If includes: Include product
+  * If not includes: Exclude product
+
+Data Source:
+- Database products: Use product.availableSizes array
+- Static products: May not have availableSizes (excluded if size filter applied)
+
+================================================================================
+PART 7: FIELD 4 - COLOR FILTER
+================================================================================
+
+7.1 COLOR DROPDOWN STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Select dropdown
+Label: "Color"
+Size: Small (h-8, text-sm)
+Options: Predefined color options
+
+7.2 COLOR OPTIONS
+-------------------------------------------------------------------------------
+
+Available Colors:
+1. "all" - "All Colors" (default)
+2. "Walnut" - "Walnut"
+3. "Brown" - "Brown"
+4. "Black" - "Black"
+5. "Tan" - "Tan"
+6. "Cognac" - "Cognac"
+7. "Burgundy" - "Burgundy"
+
+7.3 COLOR FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Value: "all" = Show all colors (no filter)
+- Value: specific color = Show products with that color (partial match)
+
+Implementation:
+- If filters.color === "all" OR filters.color is empty: Include all products
+- If filters.color is specific color:
+  * Check: product.color exists
+  * Check: product.color.toLowerCase().includes(filters.color.toLowerCase())
+  * Partial match: "Brown" matches "Dark Brown", "Light Brown", etc.
+  * Case-insensitive matching
+  * If match: Include product
+  * If no match: Exclude product
+
+Data Source:
+- Database products: Use product.color field
+- Static products: May not have color field (excluded if color filter applied)
+
+================================================================================
+PART 8: FIELD 5 - MATERIAL FILTER
+================================================================================
+
+8.1 MATERIAL DROPDOWN STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Select dropdown
+Label: "Material"
+Size: Small (h-8, text-sm)
+Options: Predefined material options
+
+8.2 MATERIAL OPTIONS
+-------------------------------------------------------------------------------
+
+Available Materials:
+1. "all" - "All Materials" (default)
+2. "Full-grain Leather" - "Full-grain Leather"
+3. "Full-grain Walnut Leather" - "Full-grain Walnut Leather"
+4. "Full-grain Brown Leather" - "Full-grain Brown Leather"
+5. "Genuine Leather" - "Genuine Leather"
+6. "Suede" - "Suede"
+7. "Shearling" - "Shearling"
+8. "Leather with Shearling" - "Leather with Shearling"
+
+8.3 MATERIAL FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Value: "all" = Show all materials (no filter)
+- Value: specific material = Show products with that material (partial match)
+
+Implementation:
+- If filters.material === "all" OR filters.material is empty: Include all products
+- If filters.material is specific material:
+  * Check: product.material exists
+  * Check: product.material.toLowerCase().includes(filters.material.toLowerCase())
+  * Partial match: "Leather" matches "Full-grain Leather", "Genuine Leather", etc.
+  * Case-insensitive matching
+  * If match: Include product
+  * If no match: Exclude product
+
+Data Source:
+- Database products: Use product.material field
+- Static products: May not have material field (excluded if material filter applied)
+
+================================================================================
+PART 9: FIELD 6 - PRICE RANGE FILTER
+================================================================================
+
+9.1 PRICE RANGE STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Collapsible section with:
+  - Slider control (dual-handle range slider)
+  - Price display (min and max values)
+  - Quick select buttons (price range presets)
+
+Label: "Price Range"
+Collapsible: Yes (controlled by showPriceRange state)
+Toggle Icon: ChevronUp when open, ChevronDown when closed
+
+9.2 PRICE RANGE SLIDER
+-------------------------------------------------------------------------------
+
+Type: Dual-handle range slider
+Min Value: $0
+Max Value: $1000
+Step: $50 increments
+Default Range: [0, 1000]
+Binding: filters.priceRange (array of 2 numbers)
+
+Slider Features:
+- Two handles: Min and max price
+- Real-time updates: As user drags handles
+- Visual feedback: Shows current range
+- Price display: Shows current min and max values below slider
+
+9.3 PRICE DISPLAY
+-------------------------------------------------------------------------------
+
+Format: "$X" (currency format)
+Position: Below slider
+Content: 
+  - Left: Minimum price (e.g., "$200")
+  - Right: Maximum price (e.g., "$600")
+Updates: Real-time as slider changes
+
+9.4 QUICK SELECT BUTTONS
+-------------------------------------------------------------------------------
+
+Predefined Price Ranges:
+1. "Under $200" - Range: [0, 200]
+2. "$200 - $400" - Range: [200, 400]
+3. "$400 - $600" - Range: [400, 600]
+4. "Over $600" - Range: [600, 1000]
+
+Button Behavior:
+- Click button: Sets priceRange to that range
+- Active state: Button highlighted when current range matches button range
+- Style: "default" variant when active, "outline" when inactive
+
+9.5 PRICE RANGE FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Default: [0, 1000] = Show all prices (no filter)
+- Custom range: [min, max] = Show only products within price range
+
+Implementation:
+- Extract numeric price from product.price:
+  * Remove "$" symbol
+  * Parse to number: parseFloat(product.price.replace('$', ''))
+- Check: productPrice >= filters.priceRange[0] AND productPrice <= filters.priceRange[1]
+- If within range: Include product
+- If outside range: Exclude product
+
+Price Format:
+- Database products: "$480" format
+- Static products: "$480" format
+- Parsing: Removes "$" and converts to number
+
+================================================================================
+PART 10: FIELD 7 - IN STOCK ONLY CHECKBOX
+================================================================================
+
+10.1 STOCK FILTER STRUCTURE
+-------------------------------------------------------------------------------
+
+Type: Checkbox input
+Label: "In Stock Only"
+Size: Small (text-sm)
+Binding: filters.showInStock (boolean)
+
+10.2 STOCK FILTER LOGIC
+-------------------------------------------------------------------------------
+
+Filter Behavior:
+- Unchecked (false): Show all products (including out of stock)
+- Checked (true): Show only products with stock > 0
+
+Implementation:
+- If filters.showInStock === false: Include all products
+- If filters.showInStock === true:
+  * Check: product.source === 'database' (only database products have stock field)
+  * Check: product.stock > 0
+  * If stock > 0: Include product
+  * If stock === 0: Exclude product
+
+Data Source:
+- Database products: Use product.stock field (number)
+- Static products: No stock field (always included if filter checked)
+
+Note: Only database products can be filtered by stock. Static products do not have stock information.
+
+================================================================================
+PART 11: SORT OPTIONS
+================================================================================
+
+11.1 SORT DROPDOWN STRUCTURE
+-------------------------------------------------------------------------------
+
+Location: Above products grid (not in filter sidebar)
+Type: Select dropdown
+Icon: SortAsc icon (left side)
+Width: 192px (w-48)
+Binding: filters.sortBy
+
+11.2 SORT OPTIONS
+-------------------------------------------------------------------------------
+
+Available Sort Options:
+1. "featured" - "Featured" (default)
+2. "price-low" - "Price: Low to High"
+3. "price-high" - "Price: High to Low"
+4. "name-a-z" - "Name: A to Z"
+5. "name-z-a" - "Name: Z to A"
+6. "newest" - "Newest First"
+
+11.3 SORTING LOGIC
+-------------------------------------------------------------------------------
+
+Implementation Order:
+1. Apply all filters first (get filtered products)
+2. Then apply sorting to filtered results
+
+Sorting Algorithms:
+
+1. Featured (default):
+   - Database products with featured: true come first
+   - Then other products
+   - Maintains original order within each group
+
+2. Price: Low to High:
+   - Extract numeric price: parseFloat(price.replace('$', ''))
+   - Sort ascending: Lower prices first
+   - Example: $200, $480, $600, $800
+
+3. Price: High to Low:
+   - Extract numeric price: parseFloat(price.replace('$', ''))
+   - Sort descending: Higher prices first
+   - Example: $800, $600, $480, $200
+
+4. Name: A to Z:
+   - Sort by product.name alphabetically
+   - Case-insensitive
+   - Ascending order
+
+5. Name: Z to A:
+   - Sort by product.name alphabetically
+   - Case-insensitive
+   - Descending order
+
+6. Newest First:
+   - Database products: Sort by createdAt date (newest first)
+   - Static products: Maintain original order
+   - If both exist: Database products first (newer)
+
+================================================================================
+PART 12: STATE MANAGEMENT
+================================================================================
+
+12.1 STATE VARIABLES
+-------------------------------------------------------------------------------
+
+Primary State:
+- filters: FilterOptions object (all filter values)
+- showFilters: boolean (controls mobile filter visibility)
+- showPriceRange: boolean (controls price range section visibility)
+
+12.2 STATE INITIALIZATION
+-------------------------------------------------------------------------------
+
+On Component Mount:
+- filters: Set to default values
+  {
+    category: "all",
+    size: "all",
+    color: "all",
+    material: "all",
+    priceRange: [0, 1000],
+    searchTerm: "",
+    sortBy: "featured",
+    showInStock: false
+  }
+- showFilters: false (mobile filters hidden)
+- showPriceRange: false (price range collapsed)
+
+12.3 STATE UPDATES
+-------------------------------------------------------------------------------
+
+Filter Changes:
+- Function: handleFilterChange(key, value)
+- Action: Updates specific filter field
+- Method: setFilters(prev => ({ ...prev, [key]: value }))
+- Result: All filters except changed one remain same
+
+Clear Filters:
+- Function: clearFilters()
+- Action: Resets all filters to default values
+- Method: setFilters({ ...default values })
+- Result: All filters reset, products show all
+
+Toggle Functions:
+- setShowFilters(!showFilters): Toggle mobile filter visibility
+- setShowPriceRange(!showPriceRange): Toggle price range section
+
+12.4 REACTIVE UPDATES
+-------------------------------------------------------------------------------
+
+Filter Changes:
+- When any filter changes, filteredProducts recalculates automatically
+- Product grid re-renders with new filtered results
+- No page refresh needed
+- Real-time filtering
+
+================================================================================
+PART 13: FILTER COMBINATION LOGIC
+================================================================================
+
+13.1 MULTI-FILTER BEHAVIOR
+-------------------------------------------------------------------------------
+
+Filter Combination:
+- All active filters work together (AND logic)
+- Product must match ALL active filters to be displayed
+- Example: If category="jackets" AND size="M" AND color="Brown"
+  * Product must be:
+    - Category: "jackets"
+    - Size available: "M"
+    - Color contains: "Brown"
+
+13.2 FILTER PRIORITY
+-------------------------------------------------------------------------------
+
+Filter Order (Evaluation):
+1. Search Term (first check)
+2. Main Category (if specified)
+3. Sub Category (if specified, takes priority over category)
+4. Category (if subCategory not specified)
+5. Size
+6. Color
+7. Material
+8. Price Range
+9. Stock (In Stock Only)
+
+Logic:
+- Each filter is evaluated in sequence
+- If product fails any filter: Excluded immediately
+- Only products passing ALL filters are displayed
+
+13.3 ACTIVE FILTER COUNT
+-------------------------------------------------------------------------------
+
+Function: getActiveFiltersCount()
+
+Counts Active Filters:
+- category !== "all": +1
+- size !== "all": +1
+- color !== "all" AND color exists: +1
+- material !== "all" AND material exists: +1
+- priceRange !== [0, 1000]: +1 (if min !== 0 OR max !== 1000)
+- searchTerm !== "": +1 (if not empty)
+- showInStock === true: +1
+
+Display:
+- Badge shows count next to "Filters" title
+- Badge only visible when count > 0
+- Updates in real-time as filters change
+
+================================================================================
+PART 14: PRODUCT FILTERING IMPLEMENTATION
+================================================================================
+
+14.1 FILTER FUNCTION STRUCTURE
+-------------------------------------------------------------------------------
+
+Location: components/shop-product-grid.tsx
+Function: filteredProducts (computed from allProducts.filter())
+
+Input: allProducts array (database + static products)
+Output: filteredProducts array (matching all active filters)
+
+14.2 FILTER CHECKS (IN SEQUENCE)
+-------------------------------------------------------------------------------
+
+CHECK 1: Search Term Filter
+- If filters.searchTerm exists:
+  * Convert to lowercase
+  * Check: product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  * If no match: return false (exclude product)
+
+CHECK 2: Main Category Filter (for collection pages)
+- If filters.mainCategory exists AND product.source === 'database':
+  * Extract: product.mainCategory OR parse from category string (split('/')[0])
+  * Check: productMainCategory === filters.mainCategory
+  * If no match: return false (exclude product)
+
+CHECK 3: Sub Category Filter (for collection pages)
+- If filters.subCategory exists AND product.source === 'database':
+  * Extract: product.subCategory OR parse from category string (split('/')[1])
+  * Check: productSubCategory === filters.subCategory
+  * If no match: return false (exclude product)
+- Else if filters.category !== "all":
+  * Check: product.category === filters.category
+  * If no match: return false (exclude product)
+
+CHECK 4: Size Filter
+- If filters.size !== "all":
+  * If filters.size === "custom":
+    - Check: Product has custom sizes (not in standard sizes list)
+    - If no custom sizes: return false
+  * Else:
+    - Check: product.availableSizes includes filters.size
+    - If not included: return false
+
+CHECK 5: Color Filter
+- If filters.color exists AND filters.color !== "all":
+  * Check: product.color exists
+  * Check: product.color.toLowerCase().includes(filters.color.toLowerCase())
+  * If no match: return false
+
+CHECK 6: Material Filter
+- If filters.material exists AND filters.material !== "all":
+  * Check: product.material exists
+  * Check: product.material.toLowerCase().includes(filters.material.toLowerCase())
+  * If no match: return false
+
+CHECK 7: Price Range Filter
+- Extract numeric price: parseFloat(product.price.replace('$', ''))
+- Check: productPrice >= filters.priceRange[0] AND productPrice <= filters.priceRange[1]
+- If outside range: return false
+
+CHECK 8: Stock Filter
+- If filters.showInStock === true:
+  * Check: product.source === 'database'
+  * Check: product.stock > 0
+  * If stock === 0: return false
+
+If all checks pass: return true (include product)
+
+14.3 PRODUCT DATA SOURCES
+-------------------------------------------------------------------------------
+
+Database Products:
+- Fetched from: GET /api/products/upload
+- Fields: All filterable fields available (category, size, color, material, stock, etc.)
+- Source: MongoDB database
+
+Static Products:
+- Hardcoded in component
+- Limited fields: May not have all filterable attributes
+- Default category: "jackets"
+- Stock: Not available (always passes stock filter)
+
+14.4 COMBINED PRODUCT ARRAY
+-------------------------------------------------------------------------------
+
+Creation:
+- Database products mapped first
+- Static products added after
+- Combined into allProducts array
+- Then filtered based on active filters
+
+================================================================================
+PART 15: CLEAR FILTERS FUNCTIONALITY
+================================================================================
+
+15.1 CLEAR BUTTON
+-------------------------------------------------------------------------------
+
+Location: Filter header (next to filter count badge)
+Visibility: Only visible when active filter count > 0
+Icon: X icon
+Size: Small (text-xs)
+Action: Resets all filters to default
+
+15.2 CLEAR FILTERS LOGIC
+-------------------------------------------------------------------------------
+
+Function: clearFilters()
+
+Actions:
+1. Resets filters state to default values:
+   - category: "all"
+   - size: "all"
+   - color: "all"
+   - material: "all"
+   - priceRange: [0, 1000]
+   - searchTerm: ""
+   - sortBy: "featured"
+   - showInStock: false
+
+2. All filter fields return to default
+3. Product grid shows all products (unfiltered)
+4. Filter count badge disappears (count = 0)
+5. Clear button hides (no active filters)
+
+15.3 CLEAR BEHAVIOR
+-------------------------------------------------------------------------------
+
+Immediate Effect:
+- All filters reset instantly
+- Product grid updates immediately
+- No page refresh needed
+- Shows complete product catalog
+
+================================================================================
+PART 16: RESPONSIVE BEHAVIOR
+================================================================================
+
+16.1 DESKTOP VIEW (lg breakpoint and above)
+-------------------------------------------------------------------------------
+
+Layout:
+- Two-column layout
+- Filters: Left sidebar (always visible)
+- Products: Right column (flexible width)
+- Filters: Sticky positioning (stays on scroll)
+
+Filter Visibility:
+- Always visible
+- No toggle button needed
+- Sticky at top when scrolling
+
+16.2 MOBILE VIEW (below lg breakpoint)
+-------------------------------------------------------------------------------
+
+Layout:
+- Single column layout
+- Filters: Hidden by default
+- Products: Full width
+
+Filter Visibility:
+- Hidden by default: className includes "hidden lg:block"
+- Toggle button: "Filters" button in header
+- Click to show/hide filters
+- Overlay or collapse behavior
+
+Mobile Filter Toggle:
+- Button: Above products grid
+- Text: "Filters"
+- Icon: Filter icon
+- Badge: Shows active filter count
+- Action: Toggles showFilters state
+
+16.3 TABLET VIEW
+-------------------------------------------------------------------------------
+
+Behavior:
+- Similar to mobile (filters hidden by default)
+- Toggle button available
+- Filters show in collapsed/overlay mode
+
+================================================================================
+PART 17: USER INTERACTION FLOW
+================================================================================
+
+17.1 TYPICAL USER JOURNEY
+-------------------------------------------------------------------------------
+
+Scenario: User wants to find brown leather jackets in size M under $500
+
+Step 1: Navigate to /shop page
+Step 2: (Mobile) Click "Filters" button to show filters
+Step 3: Select Category: "jackets" from dropdown
+Step 4: Select Size: "M" from dropdown
+Step 5: Select Color: "Brown" from dropdown
+Step 6: Select Material: "Genuine Leather" or "Full-grain Leather"
+Step 7: Expand Price Range section (click toggle)
+Step 8: Set price range to [0, 500] using slider or preset button
+Step 9: (Optional) Check "In Stock Only" checkbox
+Step 10: View filtered results in product grid
+Step 11: (Optional) Change sort order (e.g., "Price: Low to High")
+
+Result:
+- Product grid shows only products matching:
+  * Category: jackets
+  * Size: M available
+  * Color: contains "Brown"
+  * Material: contains selected material
+  * Price: $0 to $500
+  * Stock: > 0 (if checked)
+- Sorted by selected sort option
+
+17.2 FILTER MODIFICATION
+-------------------------------------------------------------------------------
+
+User can modify filters at any time:
+- Change any dropdown selection
+- Adjust price range slider
+- Toggle stock checkbox
+- Type in search box
+- Clear all filters (reset)
+
+Each change immediately updates product grid.
+
+================================================================================
+PART 18: FILTER PERSISTENCE
+================================================================================
+
+18.1 CURRENT BEHAVIOR
+-------------------------------------------------------------------------------
+
+No Persistence:
+- Filters reset on page refresh
+- Filters reset on navigation away and back
+- Filters are session-only (current page session)
+
+18.2 FILTER STATE
+-------------------------------------------------------------------------------
+
+State Management:
+- Local component state (useState)
+- Not stored in URL query parameters
+- Not stored in localStorage
+- Not stored in sessionStorage
+
+Result:
+- Filters lost on page refresh
+- Filters lost on navigation
+- User must reapply filters
+
+================================================================================
+PART 19: COMPLETE FILTER LOGIC FLOW
+================================================================================
+
+19.1 FILTER FLOW DIAGRAM
+-------------------------------------------------------------------------------
+
+User Changes Filter
+    ↓
+handleFilterChange(key, value) called
+    ↓
+filters state updated (setFilters)
+    ↓
+Component re-renders
+    ↓
+filteredProducts recalculated
+    ↓
+Products filtered based on ALL active filters
+    ↓
+Products sorted based on sortBy option
+    ↓
+Product grid displays filtered + sorted results
+
+19.2 FILTER EVALUATION PROCESS
+-------------------------------------------------------------------------------
+
+For Each Product:
+1. Check Search Term → Pass or Fail
+2. Check Main Category → Pass or Fail
+3. Check Sub Category → Pass or Fail
+4. Check Category → Pass or Fail
+5. Check Size → Pass or Fail
+6. Check Color → Pass or Fail
+7. Check Material → Pass or Fail
+8. Check Price Range → Pass or Fail
+9. Check Stock → Pass or Fail
+
+If ALL checks pass: Include product in results
+If ANY check fails: Exclude product from results
+
+19.3 SORTING PROCESS
+-------------------------------------------------------------------------------
+
+After Filtering:
+1. Take filtered products array
+2. Apply sort algorithm based on sortBy value
+3. Return sorted array
+4. Display in product grid
+
+================================================================================
+PART 20: FILTER OPTIONS DATA STRUCTURES
+================================================================================
+
+20.1 CATEGORIES CONSTANT
+-------------------------------------------------------------------------------
+
+Array of objects:
+[
+  { value: "all", label: "All Categories" },
+  { value: "jackets", label: "Jackets" },
+  { value: "bags", label: "Bags" },
+  { value: "wallets", label: "Wallets" },
+  { value: "belts", label: "Belts" },
+  { value: "accessories", label: "Accessories" }
+]
+
+20.2 SIZES CONSTANT
+-------------------------------------------------------------------------------
+
+Array of objects:
+[
+  { value: "all", label: "All Sizes" },
+  { value: "XXS", label: "XXS" },
+  { value: "XS", label: "XS" },
+  { value: "S", label: "S" },
+  { value: "M", label: "M" },
+  { value: "L", label: "L" },
+  { value: "XL", label: "XL" },
+  { value: "2XL", label: "2XL" },
+  { value: "3XL", label: "3XL" },
+  { value: "4XL", label: "4XL" },
+  { value: "custom", label: "Custom" }
+]
+
+20.3 COLORS CONSTANT
+-------------------------------------------------------------------------------
+
+Array of objects:
+[
+  { value: "all", label: "All Colors" },
+  { value: "Walnut", label: "Walnut" },
+  { value: "Brown", label: "Brown" },
+  { value: "Black", label: "Black" },
+  { value: "Tan", label: "Tan" },
+  { value: "Cognac", label: "Cognac" },
+  { value: "Burgundy", label: "Burgundy" }
+]
+
+20.4 MATERIALS CONSTANT
+-------------------------------------------------------------------------------
+
+Array of objects:
+[
+  { value: "all", label: "All Materials" },
+  { value: "Full-grain Leather", label: "Full-grain Leather" },
+  { value: "Full-grain Walnut Leather", label: "Full-grain Walnut Leather" },
+  { value: "Full-grain Brown Leather", label: "Full-grain Brown Leather" },
+  { value: "Genuine Leather", label: "Genuine Leather" },
+  { value: "Suede", label: "Suede" },
+  { value: "Shearling", label: "Shearling" },
+  { value: "Leather with Shearling", label: "Leather with Shearling" }
+]
+
+20.5 SORT OPTIONS CONSTANT
+-------------------------------------------------------------------------------
+
+Array of objects:
+[
+  { value: "featured", label: "Featured" },
+  { value: "price-low", label: "Price: Low to High" },
+  { value: "price-high", label: "Price: High to Low" },
+  { value: "name-a-z", label: "Name: A to Z" },
+  { value: "name-z-a", label: "Name: Z to A" },
+  { value: "newest", label: "Newest First" }
+]
+
+================================================================================
+PART 21: VISUAL DESIGN AND UI ELEMENTS
+================================================================================
+
+21.1 FILTER CARD DESIGN
+-------------------------------------------------------------------------------
+
+Container:
+- Card component with border
+- Rounded corners
+- Shadow/elevation
+- Sticky positioning on desktop
+- Padding: px-4 pt-3
+
+Header:
+- Border bottom separator
+- Flex layout: Space between title and actions
+- Title: "Filters" text
+- Actions: Badge and buttons
+
+Filter Fields:
+- Spacing: space-y-3 between fields
+- Labels: Small text (text-sm)
+- Inputs: Small height (h-8 where applicable)
+
+21.2 VISUAL FEEDBACK
+-------------------------------------------------------------------------------
+
+Active Filters:
+- Badge shows count
+- Clear button visible
+- Filter values displayed in dropdowns
+
+Price Range:
+- Collapsible section
+- Chevron icon indicates state
+- Slider with visual handles
+- Price display below slider
+- Active preset button highlighted
+
+21.3 INTERACTIVE ELEMENTS
+-------------------------------------------------------------------------------
+
+Dropdowns:
+- Hover states
+- Focus states
+- Active selection highlighted
+
+Slider:
+- Draggable handles
+- Smooth transitions
+- Real-time value updates
+
+Buttons:
+- Hover effects
+- Active states
+- Click feedback
+
+Checkbox:
+- Standard checkbox styling
+- Checked/unchecked states
+
+================================================================================
+PART 22: PERFORMANCE CONSIDERATIONS
+================================================================================
+
+22.1 FILTERING PERFORMANCE
+-------------------------------------------------------------------------------
+
+Client-Side Filtering:
+- All filtering done in browser (client-side)
+- No API calls for filtering
+- Fast for small to medium product catalogs
+- Performance depends on total number of products
+
+22.2 RENDERING OPTIMIZATION
+-------------------------------------------------------------------------------
+
+React Re-renders:
+- Filter changes trigger re-render
+- Only filtered products rendered
+- Virtual scrolling not implemented
+- All filtered products rendered at once
+
+22.3 DATA FETCHING
+-------------------------------------------------------------------------------
+
+Initial Load:
+- All products fetched once on component mount
+- Products stored in component state
+- No additional fetches for filtering
+- Single API call: GET /api/products/upload
+
+================================================================================
+PART 23: EDGE CASES AND SPECIAL BEHAVIORS
+================================================================================
+
+23.1 EMPTY RESULTS
+-------------------------------------------------------------------------------
+
+Behavior:
+- If no products match filters: Empty state shown
+- Product grid shows "No products found" message
+- User can clear filters to see all products
+
+23.2 MISSING PRODUCT DATA
+-------------------------------------------------------------------------------
+
+Database Products:
+- If field missing (e.g., no color): Product excluded when that filter applied
+- Null/undefined checks in filter logic
+- Safe access with optional chaining
+
+Static Products:
+- Limited fields available
+- May not match filters requiring database fields
+- Always pass stock filter (no stock field)
+
+23.3 CASE SENSITIVITY
+-------------------------------------------------------------------------------
+
+Search:
+- Case-insensitive (converts to lowercase)
+
+Color/Material:
+- Case-insensitive (partial match with lowercase)
+
+Category/Size:
+- Exact match (case-sensitive values)
+
+23.4 PRICE PARSING
+-------------------------------------------------------------------------------
+
+Price Format:
+- Expected: "$480" format
+- Parsing: Removes "$" and converts to number
+- Error handling: parseFloat returns NaN if invalid
+- NaN values: May cause filtering issues
+
+================================================================================
+PART 24: INTEGRATION WITH PRODUCT GRID
+================================================================================
+
+24.1 FILTER PROP PASSING
+-------------------------------------------------------------------------------
+
+Component Hierarchy:
+- ShopPage (app/shop/page.tsx)
+  - Filter Sidebar (Card component)
+  - ShopProductGrid (components/shop-product-grid.tsx)
+
+Props:
+- filters: FilterOptions object
+- Passed from ShopPage to ShopProductGrid
+- Real-time updates as filters change
+
+24.2 PRODUCT GRID RESPONSE
+-------------------------------------------------------------------------------
+
+Filter Changes:
+- ShopProductGrid receives new filters prop
+- Recalculates filteredProducts
+- Re-renders product grid with new results
+- No additional API calls needed
+
+24.3 PRODUCT DISPLAY
+-------------------------------------------------------------------------------
+
+Filtered Results:
+- Displayed in grid layout
+- Same card format as unfiltered
+- All product features available (wishlist, cart, etc.)
+- Currency conversion applied
+- Language translation applied
+
+================================================================================
+PART 25: COMPLETE WORKFLOW EXAMPLE
+================================================================================
+
+25.1 EXAMPLE: FILTERING FOR BROWN LEATHER JACKETS
+-------------------------------------------------------------------------------
+
+User Actions:
+1. Navigate to /shop page
+2. Select Category: "jackets"
+3. Select Color: "Brown"
+4. Select Material: "Genuine Leather"
+5. Set Price Range: [0, 500]
+6. Check "In Stock Only"
+
+System Processing:
+
+Step 1: Filters state updated
+{
+  category: "jackets",
+  size: "all",
+  color: "Brown",
+  material: "Genuine Leather",
+  priceRange: [0, 500],
+  searchTerm: "",
+  sortBy: "featured",
+  showInStock: true
+}
+
+Step 2: All products evaluated against filters
+- Product 1: "Classic Rider Jacket"
+  * Category: "jackets" → ✓
+  * Color: "Brown" → ✓
+  * Material: "Genuine Leather" → ✓
+  * Price: $480 → ✓ (within range)
+  * Stock: 10 → ✓
+  * Result: INCLUDED
+
+- Product 2: "Black Bomber Jacket"
+  * Category: "jackets" → ✓
+  * Color: "Black" → ✗ (not Brown)
+  * Result: EXCLUDED
+
+- Product 3: "Brown Leather Bag"
+  * Category: "bags" → ✗ (not jackets)
+  * Result: EXCLUDED
+
+Step 3: Filtered products sorted by "featured"
+Step 4: Product grid displays matching products
+
+Result:
+- Shows only brown, genuine leather jackets
+- Price range: $0 to $500
+- In stock only
+- Sorted by featured status
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+

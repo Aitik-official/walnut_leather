@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "Walnut Leather - Premium Leather Jackets",
   description: "Premium full-grain leather jackets, hand-finished for character and built to age beautifully.",
   generator: "v0.app",
+  icons: {
+    icon: "/logo/walnut-leather-logoonly.png",
+    shortcut: "/logo/walnut-leather-logoonly.png",
+    apple: "/logo/walnut-leather-logoonly.png",
+  },
 }
 
 const openSans = Open_Sans({

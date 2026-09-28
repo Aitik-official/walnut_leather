@@ -1,0 +1,950 @@
+================================================================================
+DASHBOARD CATEGORY MANAGEMENT - ADDING MAIN & SUB CATEGORIES
+COMPLETE LOGIC AND FUNCTIONALITY IN TEXT FORMAT
+================================================================================
+
+LOCATION: Dashboard → Categories Tab
+COMPONENT: components/category-management.tsx
+API ROUTES: 
+  - /api/categories/main (GET, POST)
+  - /api/categories/sub (GET, POST)
+
+================================================================================
+PART 1: ADDING MAIN CATEGORY - COMPLETE LOGIC
+================================================================================
+
+1.1 ACCESSING THE MAIN CATEGORY FORM
+-------------------------------------------------------------------------------
+
+Navigation Path:
+Dashboard → Categories Tab → Main Categories Tab → "Add Main Category" Button
+
+UI Elements:
+- Tab Navigation: Two tabs ("Main Categories" and "Sub Categories")
+- Button Location: Top right of Main Categories tab
+- Button Text: "Add Main Category" with Plus icon
+- Form Type: Modal Dialog (overlay form)
+
+1.2 MAIN CATEGORY FORM STRUCTURE
+-------------------------------------------------------------------------------
+
+Form Fields:
+
+FIELD 1: Category Name
+- Type: Dropdown Select
+- Required: Yes (indicated by asterisk *)
+- Options: Only two values
+  * "Mens"
+  * "Womens"
+- Behavior: 
+  * User must select from dropdown (no free text input)
+  * Dropdown shows only these two options
+  * When editing, this field is DISABLED (cannot change name after creation)
+- Validation: Only accepts "Mens" or "Womens"
+- Helper Text: "Main category must be either 'Mens' or 'Womens'"
+
+FIELD 2: Category Image URL
+- Type: Text Input (URL type)
+- Required: No (optional field)
+- Format: Full URL string (e.g., "https://example.com/image.jpg")
+- Placeholder: "https://example.com/image.jpg"
+- Purpose: Image displayed on collection page for main category cards
+- Helper Text: "Image URL for the category card (used in collections page)"
+
+Form Actions:
+- Cancel Button: Closes dialog, clears form, does not save
+- Create/Update Button: Submits form and saves to database
+  * Text changes based on mode: "Create" (new) or "Update" (editing)
+  * Disabled state: Button disabled if Category Name is empty
+
+1.3 MAIN CATEGORY FORM STATE MANAGEMENT
+-------------------------------------------------------------------------------
+
+State Variables:
+- mainCategoryForm: Object with two properties
+  {
+    name: string (empty string initially)
+    image: string (empty string initially)
+  }
+- showMainCategoryDialog: boolean (controls dialog visibility)
+- editingMainCategory: MainCategory object or null
+  * null = Creating new category
+  * MainCategory object = Editing existing category
+
+Form Initialization:
+- On "Add" button click: Resets form to empty state
+  * name: ""
+  * image: ""
+  * editingMainCategory: null
+- On "Edit" button click: Pre-fills form with existing data
+  * name: category.name
+  * image: category.image || ""
+  * editingMainCategory: category object
+
+1.4 MAIN CATEGORY FORM SUBMISSION LOGIC
+-------------------------------------------------------------------------------
+
+Step-by-Step Process:
+
+STEP 1: Form Validation (Client-Side)
+- Check: Is name field filled?
+- If empty: Submit button is disabled (prevention)
+- If filled: Proceed to submission
+
+STEP 2: Determine API Endpoint
+- Check: Is editingMainCategory null?
+  * If null (creating new):
+    - URL: '/api/categories/main'
+    - Method: 'POST'
+  * If not null (editing):
+    - URL: '/api/categories/main/{category._id}'
+    - Method: 'PUT'
+
+STEP 3: Prepare Request Data
+- Extract form values:
+  * name: mainCategoryForm.name
+  * image: mainCategoryForm.image
+- Format: JSON object
+  {
+    name: string,
+    image: string
+  }
+
+STEP 4: Send API Request
+- Method: POST or PUT (based on editing state)
+- Headers: { 'Content-Type': 'application/json' }
+- Body: JSON.stringify(mainCategoryForm)
+- Endpoint: Determined in Step 2
+
+STEP 5: Handle API Response
+- If success (data.success === true):
+  * Show success toast notification
+    - Title: "Success!"
+    - Description: "Main category created successfully" OR "Main category updated successfully"
+  * Close dialog (setShowMainCategoryDialog(false))
+  * Reset form (clear all fields)
+  * Clear editing state (setEditingMainCategory(null))
+  * Refresh category list (fetchCategories())
+  
+- If error (data.success === false):
+  * Show error toast notification
+    - Title: "Error"
+    - Description: data.error message from API OR "Failed to save main category"
+    - Variant: "destructive" (red color)
+
+STEP 6: Refresh Category List
+- Function: fetchCategories()
+- Actions:
+  * Fetches all main categories from API
+  * Updates mainCategories state array
+  * Table automatically re-renders with new/updated category
+
+1.5 SERVER-SIDE API LOGIC FOR MAIN CATEGORY CREATION
+-------------------------------------------------------------------------------
+
+API Route: POST /api/categories/main
+
+REQUEST PROCESSING:
+
+STEP 1: Parse Request Body
+- Extract: name, image from request body
+- Format: JSON object
+
+STEP 2: Validation
+- Check: Is name provided?
+  * If missing: Return error
+    {
+      success: false,
+      error: 'Category name is required'
+    }
+    Status: 400 (Bad Request)
+
+- Check: Is name valid?
+  * Valid values: "Mens" or "Womens" (case-insensitive)
+  * Normalization: Converts to title case
+    - Input: "mens" → "Mens"
+    - Input: "WOMENS" → "Womens"
+    - Input: "Mens" → "Mens"
+  * Validation:
+    - normalizedName must be either "Mens" or "Womens"
+    - If invalid: Return error
+      {
+        success: false,
+        error: 'Main category must be either "Mens" or "Womens"'
+      }
+      Status: 400
+
+STEP 3: Database Connection
+- Connect to MongoDB
+- Access collection: 'main_categories'
+- Collection name defined in: COLLECTIONS.MAIN_CATEGORIES
+
+STEP 4: Duplicate Check
+- Query: Find category with same name
+  {
+    name: normalizedName
+  }
+- If exists: Return error
+  {
+    success: false,
+    error: 'Category already exists'
+  }
+  Status: 400
+- If not exists: Proceed
+
+STEP 5: Create Category Document
+- Structure:
+  {
+    name: normalizedName (string: "Mens" or "Womens"),
+    image: image || '' (string: URL or empty string),
+    createdAt: new Date() (Date object),
+    updatedAt: new Date() (Date object)
+  }
+
+STEP 6: Insert into Database
+- Method: insertOne(newCategory)
+- Collection: main_categories
+- Returns: Insert result with generated _id
+
+STEP 7: Return Success Response
+- Format:
+  {
+    success: true,
+    category: {
+      _id: result.insertedId.toString(),
+      name: normalizedName,
+      image: image || '',
+      createdAt: Date,
+      updatedAt: Date
+    }
+  }
+- Status: 200 (OK)
+
+ERROR HANDLING:
+- Database errors: Return generic error message
+- Log error to console for debugging
+- Return:
+  {
+    success: false,
+    error: 'Failed to create category'
+  }
+  Status: 500 (Internal Server Error)
+
+1.6 MAIN CATEGORY DATA STORAGE
+-------------------------------------------------------------------------------
+
+Database Collection: main_categories
+
+Document Structure:
+{
+  _id: ObjectId (auto-generated by MongoDB),
+  name: String (required, "Mens" or "Womens"),
+  image: String (optional, URL or empty string),
+  createdAt: Date (auto-set on creation),
+  updatedAt: Date (auto-set on creation and updates)
+}
+
+Storage Location: MongoDB database (collection: main_categories)
+Persistence: Permanent (until deleted)
+
+================================================================================
+PART 2: ADDING SUB CATEGORY - COMPLETE LOGIC
+================================================================================
+
+2.1 ACCESSING THE SUB CATEGORY FORM
+-------------------------------------------------------------------------------
+
+Navigation Path:
+Dashboard → Categories Tab → Sub Categories Tab → "Add Sub Category" Button
+
+UI Elements:
+- Tab Navigation: Two tabs ("Main Categories" and "Sub Categories")
+- Button Location: Top right of Sub Categories tab
+- Button Text: "Add Sub Category" with Plus icon
+- Form Type: Modal Dialog (overlay form)
+
+2.2 SUB CATEGORY FORM STRUCTURE
+-------------------------------------------------------------------------------
+
+Form Fields:
+
+FIELD 1: Main Category
+- Type: Dropdown Select
+- Required: Yes (indicated by asterisk *)
+- Options: Dynamically populated from existing main categories
+  * Fetches all main categories from database
+  * Shows category names (e.g., "Mens", "Womens")
+  * Dropdown populated with: mainCategories.map(cat => cat.name)
+- Behavior:
+  * User must select a main category first
+  * Options come from actual database records
+  * If no main categories exist, dropdown will be empty
+- Validation: Must select a main category before creating sub category
+- Helper Text: None (self-explanatory)
+
+FIELD 2: Sub Category Name
+- Type: Text Input
+- Required: Yes (indicated by asterisk *)
+- Format: Free text input
+- Placeholder: "e.g., Rider, Bomber, Biker"
+- Behavior:
+  * User types the name freely
+  * No dropdown restriction
+  * Examples: "Rider", "Bomber", "Biker", "Aviator", etc.
+- Validation: Must not be empty
+- Helper Text: "Name of the jacket type (e.g., Rider, Bomber, Biker)"
+
+FIELD 3: Category Image URL
+- Type: Text Input (URL type)
+- Required: No (optional field)
+- Format: Full URL string (e.g., "https://example.com/image.jpg")
+- Placeholder: "https://example.com/image.jpg"
+- Purpose: Image displayed on subcategory card in collection page
+- Helper Text: "Image URL for the sub category card (used in collections page)"
+
+Form Actions:
+- Cancel Button: Closes dialog, clears form, does not save
+- Create/Update Button: Submits form and saves to database
+  * Text changes based on mode: "Create" (new) or "Update" (editing)
+  * Disabled state: Button disabled if Sub Category Name is empty OR Main Category is not selected
+
+2.3 SUB CATEGORY FORM STATE MANAGEMENT
+-------------------------------------------------------------------------------
+
+State Variables:
+- subCategoryForm: Object with three properties
+  {
+    name: string (empty string initially)
+    mainCategory: string (empty string initially)
+    image: string (empty string initially)
+  }
+- showSubCategoryDialog: boolean (controls dialog visibility)
+- editingSubCategory: SubCategory object or null
+  * null = Creating new sub category
+  * SubCategory object = Editing existing sub category
+- mainCategories: Array of MainCategory objects
+  * Used to populate Main Category dropdown
+  * Fetched from database on component mount
+
+Form Initialization:
+- On "Add" button click: Resets form to empty state
+  * name: ""
+  * mainCategory: ""
+  * image: ""
+  * editingSubCategory: null
+- On "Edit" button click: Pre-fills form with existing data
+  * name: subCategory.name
+  * mainCategory: subCategory.mainCategory
+  * image: subCategory.image || ""
+  * editingSubCategory: subCategory object
+
+2.4 SUB CATEGORY FORM SUBMISSION LOGIC
+-------------------------------------------------------------------------------
+
+Step-by-Step Process:
+
+STEP 1: Client-Side Validation
+- Check 1: Is mainCategory selected?
+  * If empty: Show error toast
+    - Title: "Error"
+    - Description: "Please select a main category"
+    - Variant: "destructive"
+    - Action: Return (stop submission)
+  
+- Check 2: Is name field filled?
+  * If empty: Submit button is disabled (prevention)
+  * If filled: Proceed to submission
+
+STEP 2: Determine API Endpoint
+- Check: Is editingSubCategory null?
+  * If null (creating new):
+    - URL: '/api/categories/sub'
+    - Method: 'POST'
+  * If not null (editing):
+    - URL: '/api/categories/sub/{subCategory._id}'
+    - Method: 'PUT'
+
+STEP 3: Prepare Request Data
+- Extract form values:
+  * name: subCategoryForm.name
+  * mainCategory: subCategoryForm.mainCategory (name string, not ID)
+  * image: subCategoryForm.image
+- Format: JSON object
+  {
+    name: string,
+    mainCategory: string (category name, e.g., "Mens"),
+    image: string
+  }
+
+STEP 4: Send API Request
+- Method: POST or PUT (based on editing state)
+- Headers: { 'Content-Type': 'application/json' }
+- Body: JSON.stringify(subCategoryForm)
+- Endpoint: Determined in Step 2
+
+STEP 5: Handle API Response
+- If success (data.success === true):
+  * Show success toast notification
+    - Title: "Success!"
+    - Description: "Sub category created successfully" OR "Sub category updated successfully"
+  * Close dialog (setShowSubCategoryDialog(false))
+  * Reset form (clear all fields)
+  * Clear editing state (setEditingSubCategory(null))
+  * Refresh category list (fetchCategories())
+  
+- If error (data.success === false):
+  * Show error toast notification
+    - Title: "Error"
+    - Description: data.error message from API OR "Failed to save sub category"
+    - Variant: "destructive" (red color)
+
+STEP 6: Refresh Category List
+- Function: fetchCategories()
+- Actions:
+  * Fetches all main categories and sub categories from API
+  * Updates mainCategories and subCategories state arrays
+  * Table automatically re-renders with new/updated sub category
+
+2.5 SERVER-SIDE API LOGIC FOR SUB CATEGORY CREATION
+-------------------------------------------------------------------------------
+
+API Route: POST /api/categories/sub
+
+REQUEST PROCESSING:
+
+STEP 1: Parse Request Body
+- Extract: name, mainCategory, image from request body
+- Format: JSON object
+
+STEP 2: Validation
+- Check: Are name and mainCategory provided?
+  * If missing: Return error
+    {
+      success: false,
+      error: 'Sub category name and main category are required'
+    }
+    Status: 400 (Bad Request)
+
+STEP 3: Database Connection
+- Connect to MongoDB
+- Access collections:
+  * 'main_categories' (to validate main category exists)
+  * 'sub_categories' (to save new sub category)
+
+STEP 4: Validate Main Category Exists
+- Query: Find main category with matching name
+  Collection: main_categories
+  Query: { name: mainCategory }
+- If not found: Return error
+  {
+    success: false,
+    error: 'Main category does not exist'
+  }
+  Status: 400
+- If found: Proceed
+
+STEP 5: Duplicate Check
+- Query: Find sub category with same name AND same main category
+  Collection: sub_categories
+  Query:
+    {
+      name: name,
+      mainCategory: mainCategory
+    }
+- Logic:
+  * Same sub category name can exist under different main categories
+    Example: "Rider" can exist under both "Mens" and "Womens"
+  * Same sub category name cannot exist twice under same main category
+    Example: Cannot have two "Rider" subcategories under "Mens"
+- If exists: Return error
+  {
+    success: false,
+    error: 'Sub category already exists for this main category'
+  }
+  Status: 400
+- If not exists: Proceed
+
+STEP 6: Create Sub Category Document
+- Structure:
+  {
+    name: name (string: sub category name, e.g., "Rider"),
+    mainCategory: mainCategory (string: parent category name, e.g., "Mens"),
+    image: image || '' (string: URL or empty string),
+    createdAt: new Date() (Date object),
+    updatedAt: new Date() (Date object)
+  }
+
+STEP 7: Insert into Database
+- Method: insertOne(newSubCategory)
+- Collection: sub_categories
+- Returns: Insert result with generated _id
+
+STEP 8: Return Success Response
+- Format:
+  {
+    success: true,
+    subCategory: {
+      _id: result.insertedId.toString(),
+      name: name,
+      mainCategory: mainCategory,
+      image: image || '',
+      createdAt: Date,
+      updatedAt: Date
+    }
+  }
+- Status: 200 (OK)
+
+ERROR HANDLING:
+- Database errors: Return generic error message
+- Log error to console for debugging
+- Return:
+  {
+    success: false,
+    error: 'Failed to create sub category'
+  }
+  Status: 500 (Internal Server Error)
+
+2.6 SUB CATEGORY DATA STORAGE
+-------------------------------------------------------------------------------
+
+Database Collection: sub_categories
+
+Document Structure:
+{
+  _id: ObjectId (auto-generated by MongoDB),
+  name: String (required, sub category name, e.g., "Rider"),
+  mainCategory: String (required, parent category name, e.g., "Mens"),
+  image: String (optional, URL or empty string),
+  createdAt: Date (auto-set on creation),
+  updatedAt: Date (auto-set on creation and updates)
+}
+
+Relationship:
+- mainCategory field stores the NAME of the main category (not ID)
+- Links sub category to parent main category via name matching
+- Allows filtering: Find all subcategories where mainCategory === "Mens"
+
+Storage Location: MongoDB database (collection: sub_categories)
+Persistence: Permanent (until deleted)
+
+================================================================================
+PART 3: DATA FETCHING AND STATE MANAGEMENT
+================================================================================
+
+3.1 INITIAL DATA LOADING
+-------------------------------------------------------------------------------
+
+On Component Mount (useEffect):
+- Function: fetchCategories()
+- Actions:
+  1. Set loading state to true
+  2. Make parallel API calls:
+     * GET /api/categories/main
+     * GET /api/categories/sub
+  3. Process responses:
+     * If mainData.success === true: Set mainCategories state
+     * If subData.success === true: Set subCategories state
+  4. Set loading state to false
+  5. If error: Show error toast notification
+
+State Updates:
+- mainCategories: Array of MainCategory objects
+- subCategories: Array of SubCategory objects
+- loading: Boolean (true during fetch, false after)
+
+3.2 DATA REFRESHING
+-------------------------------------------------------------------------------
+
+After Category Operations:
+- Function: fetchCategories() called after:
+  * Creating main category (success)
+  * Updating main category (success)
+  * Deleting main category (success)
+  * Creating sub category (success)
+  * Updating sub category (success)
+  * Deleting sub category (success)
+
+Purpose: Keep category lists synchronized with database
+
+3.3 DYNAMIC DROPDOWN POPULATION
+-------------------------------------------------------------------------------
+
+Main Category Dropdown (in Sub Category form):
+- Source: mainCategories state array
+- Mapping: mainCategories.map(cat => cat.name)
+- Options: Only shows existing main categories from database
+- Behavior: Updates automatically when main categories are added/deleted
+
+================================================================================
+PART 4: FORM INTERACTIONS AND USER EXPERIENCE
+================================================================================
+
+4.1 FORM MODAL BEHAVIOR
+-------------------------------------------------------------------------------
+
+Dialog Opening:
+- Click "Add" button → Dialog opens
+- Form state resets to empty
+- Editing state set to null
+
+Dialog Closing:
+- Click "Cancel" button → Dialog closes, form resets
+- Click outside dialog → Dialog closes (if onOpenChange handler allows)
+- After successful submission → Dialog closes automatically
+
+4.2 FORM VALIDATION FEEDBACK
+-------------------------------------------------------------------------------
+
+Client-Side Validation:
+- Required fields: Submit button disabled if empty
+- Visual indicators: Asterisk (*) marks required fields
+- Helper text: Guidance below each field
+
+Server-Side Validation:
+- Error messages: Displayed in toast notifications
+- Specific errors: API returns detailed error messages
+- User feedback: Clear indication of what went wrong
+
+4.3 SUCCESS FEEDBACK
+-------------------------------------------------------------------------------
+
+Toast Notifications:
+- Title: "Success!"
+- Description: Specific success message
+- Duration: Auto-dismisses after few seconds
+- Visual: Green/positive color scheme
+
+List Updates:
+- Category table refreshes automatically
+- New category appears immediately in list
+- No page refresh required
+
+4.4 ERROR HANDLING
+-------------------------------------------------------------------------------
+
+Network Errors:
+- Toast notification with error message
+- Form remains open for retry
+- User can correct and resubmit
+
+Validation Errors:
+- Specific error messages from API
+- User knows exactly what to fix
+- Form stays open for correction
+
+================================================================================
+PART 5: COMPLETE WORKFLOW EXAMPLES
+================================================================================
+
+5.1 EXAMPLE 1: CREATING MAIN CATEGORY "Mens"
+-------------------------------------------------------------------------------
+
+User Actions:
+1. Navigate to Dashboard → Categories Tab
+2. Click "Main Categories" tab (if not already selected)
+3. Click "Add Main Category" button
+4. Dialog opens with empty form
+5. Select "Mens" from Category Name dropdown
+6. Enter image URL: "https://example.com/mens-category.jpg"
+7. Click "Create" button
+
+System Actions:
+1. Form validates: Name is filled (✓)
+2. Determines: Creating new (POST request)
+3. Sends POST request to /api/categories/main
+4. Server validates: Name is "Mens" (✓)
+5. Server checks: No duplicate (✓)
+6. Server creates document in main_categories collection
+7. Server returns success response
+8. Client shows success toast
+9. Dialog closes
+10. Form resets
+11. fetchCategories() refreshes list
+12. "Mens" appears in Main Categories table
+
+Result:
+- New main category "Mens" created in database
+- Available immediately for:
+  * Product creation forms
+  * Sub category creation (as parent)
+  * Collection page navigation
+
+5.2 EXAMPLE 2: CREATING SUB CATEGORY "Rider" UNDER "Mens"
+-------------------------------------------------------------------------------
+
+User Actions:
+1. Navigate to Dashboard → Categories Tab
+2. Click "Sub Categories" tab
+3. Click "Add Sub Category" button
+4. Dialog opens with empty form
+5. Select "Mens" from Main Category dropdown
+6. Enter "Rider" in Sub Category Name field
+7. Enter image URL: "https://example.com/rider-jacket.jpg"
+8. Click "Create" button
+
+System Actions:
+1. Form validates: Main category selected (✓), Name filled (✓)
+2. Determines: Creating new (POST request)
+3. Sends POST request to /api/categories/sub
+   Body: {
+     name: "Rider",
+     mainCategory: "Mens",
+     image: "https://example.com/rider-jacket.jpg"
+   }
+4. Server validates: Name and mainCategory provided (✓)
+5. Server checks: Main category "Mens" exists (✓)
+6. Server checks: No duplicate "Rider" under "Mens" (✓)
+7. Server creates document in sub_categories collection
+8. Server returns success response
+9. Client shows success toast
+10. Dialog closes
+11. Form resets
+12. fetchCategories() refreshes list
+13. "Rider" appears in Sub Categories table
+
+Result:
+- New sub category "Rider" created in database
+- Linked to "Mens" main category
+- Available immediately for:
+  * Product creation forms (when "Mens" is selected)
+  * Collection page display (/collection/mens shows "Rider" card)
+
+5.3 EXAMPLE 3: CREATING MULTIPLE SUB CATEGORIES
+-------------------------------------------------------------------------------
+
+Scenario: Admin wants to add multiple jacket types under "Mens"
+
+Process:
+1. Create main category "Mens" (if not exists)
+2. Create sub category "Rider" under "Mens"
+3. Create sub category "Bomber" under "Mens"
+4. Create sub category "Biker" under "Mens"
+5. Each sub category can have different image
+6. All sub categories linked to same main category "Mens"
+
+Result:
+- Three sub categories created
+- All appear in Sub Categories table
+- All available when creating products with main category "Mens"
+- All appear in /collection/mens page grid
+
+================================================================================
+PART 6: VALIDATION RULES SUMMARY
+================================================================================
+
+6.1 MAIN CATEGORY VALIDATION
+-------------------------------------------------------------------------------
+
+Required Fields:
+- Category Name: YES (must select from dropdown)
+
+Optional Fields:
+- Image URL: NO (can be empty)
+
+Name Validation:
+- Must be exactly "Mens" or "Womens"
+- Case-insensitive input (normalized to title case)
+- No duplicates allowed
+- Cannot change name after creation (disabled in edit mode)
+
+6.2 SUB CATEGORY VALIDATION
+-------------------------------------------------------------------------------
+
+Required Fields:
+- Main Category: YES (must select from dropdown)
+- Sub Category Name: YES (must enter text)
+
+Optional Fields:
+- Image URL: NO (can be empty)
+
+Name Validation:
+- Free text (no restrictions on name value)
+- Examples: "Rider", "Bomber", "Biker", "Aviator", etc.
+
+Main Category Validation:
+- Must exist in database
+- Cannot create sub category for non-existent main category
+
+Duplicate Validation:
+- Same name can exist under different main categories
+  Example: "Rider" can exist under both "Mens" and "Womens"
+- Same name cannot exist twice under same main category
+  Example: Cannot have two "Rider" subcategories under "Mens"
+
+================================================================================
+PART 7: DATABASE STRUCTURE AND RELATIONSHIPS
+================================================================================
+
+7.1 MAIN CATEGORIES COLLECTION
+-------------------------------------------------------------------------------
+
+Collection Name: main_categories
+
+Document Example:
+{
+  _id: ObjectId("507f1f77bcf86cd799439011"),
+  name: "Mens",
+  image: "https://example.com/mens-category.jpg",
+  createdAt: ISODate("2024-01-15T10:30:00Z"),
+  updatedAt: ISODate("2024-01-15T10:30:00Z")
+}
+
+Indexes:
+- name: Should have unique index (prevents duplicates)
+
+7.2 SUB CATEGORIES COLLECTION
+-------------------------------------------------------------------------------
+
+Collection Name: sub_categories
+
+Document Example:
+{
+  _id: ObjectId("507f191e810c19729de860ea"),
+  name: "Rider",
+  mainCategory: "Mens",
+  image: "https://example.com/rider-jacket.jpg",
+  createdAt: ISODate("2024-01-15T11:00:00Z"),
+  updatedAt: ISODate("2024-01-15T11:00:00Z")
+}
+
+Relationship:
+- mainCategory field: Stores name of parent category (string)
+- Not a database reference (not ObjectId)
+- Linked by name matching
+
+7.3 HIERARCHICAL STRUCTURE
+-------------------------------------------------------------------------------
+
+Level 1: Main Category
+- Examples: "Mens", "Womens"
+- Stored in: main_categories collection
+- Parent of: Sub Categories
+
+Level 2: Sub Category
+- Examples: "Rider", "Bomber", "Biker"
+- Stored in: sub_categories collection
+- Child of: Main Category
+- Linked via: mainCategory field (stores parent name)
+
+Relationship Flow:
+Main Category ("Mens")
+  └─ Sub Category ("Rider") [mainCategory: "Mens"]
+  └─ Sub Category ("Bomber") [mainCategory: "Mens"]
+  └─ Sub Category ("Biker") [mainCategory: "Mens"]
+
+================================================================================
+PART 8: API ENDPOINTS DETAIL
+================================================================================
+
+8.1 MAIN CATEGORIES API
+-------------------------------------------------------------------------------
+
+GET /api/categories/main
+- Purpose: Fetch all main categories
+- Method: GET
+- Parameters: None
+- Response:
+  {
+    success: boolean,
+    categories: MainCategory[] (array of category objects)
+  }
+- Sorting: Alphabetical by name (name: 1)
+
+POST /api/categories/main
+- Purpose: Create new main category
+- Method: POST
+- Headers: Content-Type: application/json
+- Body:
+  {
+    name: string ("Mens" or "Womens"),
+    image: string (optional URL)
+  }
+- Response Success:
+  {
+    success: true,
+    category: MainCategory object
+  }
+- Response Error:
+  {
+    success: false,
+    error: string (error message)
+  }
+
+8.2 SUB CATEGORIES API
+-------------------------------------------------------------------------------
+
+GET /api/categories/sub
+- Purpose: Fetch sub categories (optionally filtered)
+- Method: GET
+- Query Parameters:
+  * mainCategory (optional): Filter by main category name
+    Example: /api/categories/sub?mainCategory=Mens
+- Response:
+  {
+    success: boolean,
+    subCategories: SubCategory[] (array of sub category objects)
+  }
+- Sorting: Alphabetical by name (name: 1)
+- Filtering: If mainCategory provided, only returns matching subcategories
+
+POST /api/categories/sub
+- Purpose: Create new sub category
+- Method: POST
+- Headers: Content-Type: application/json
+- Body:
+  {
+    name: string (sub category name),
+    mainCategory: string (parent category name),
+    image: string (optional URL)
+  }
+- Response Success:
+  {
+    success: true,
+    subCategory: SubCategory object
+  }
+- Response Error:
+  {
+    success: false,
+    error: string (error message)
+  }
+
+================================================================================
+PART 9: INTEGRATION WITH OTHER FEATURES
+================================================================================
+
+9.1 PRODUCT CREATION INTEGRATION
+-------------------------------------------------------------------------------
+
+When Creating Product:
+- Main Category dropdown: Populated from main_categories collection
+- Sub Category dropdown: Filtered by selected main category
+  * Shows only subcategories where mainCategory matches selected main category
+- Category assignment: Product linked to both main and sub categories
+
+9.2 COLLECTION PAGE INTEGRATION
+-------------------------------------------------------------------------------
+
+Collection Page (/collection/[category]):
+- Fetches subcategories: GET /api/categories/sub?mainCategory={name}
+- Displays subcategories: 3x3 grid layout
+- Each subcategory card shows:
+  * Image from database (subcategory.image)
+  * Name from database (subcategory.name)
+
+9.3 REAL-TIME UPDATES
+-------------------------------------------------------------------------------
+
+Immediate Availability:
+- After creating main category → Available in product forms immediately
+- After creating sub category → Appears in collection page grid
+- After creating sub category → Available in product forms (filtered)
+
+No Cache Issues:
+- Categories fetched fresh from database
+- No stale data issues
+- Always synchronized
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+

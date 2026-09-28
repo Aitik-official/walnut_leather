@@ -10,16 +10,11 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
 import { useRouter } from "next/navigation"
-import AuthModal from "@/components/auth-modal"
-import { useAuth } from "@/components/auth-context"
 
 export default function CartPage() {
   const { items, increment, decrement, remove, clear, total, count } = useCart()
   const { toast } = useToast()
-  const { isAuthenticated } = useAuth()
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const router = useRouter()
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
@@ -56,11 +51,7 @@ export default function CartPage() {
   }
 
   const handleProceedToCheckout = () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-    } else {
-      router.push('/checkout')
-    }
+    router.push('/checkout')
   }
 
   if (items.length === 0) {
@@ -243,12 +234,6 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Auth Modal */}
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => router.push('/checkout')}
-      />
     </main>
   )
 }

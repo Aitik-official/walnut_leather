@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Upload, Image, Video, Package, Save, Eye, Trash2, Plus, Edit, Eye as ViewIcon, BarChart3, Users, ShoppingCart, Search, Truck, DollarSign, FolderTree } from "lucide-react"
+import { Upload, Image, Video, Package, Save, Eye, Trash2, Plus, Edit, Eye as ViewIcon, BarChart3, Users, ShoppingCart, Search, Truck, DollarSign, FolderTree, Receipt } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import AdminAuthModal from "@/components/admin-auth-modal"
 import CategoryManagement from "@/components/category-management"
+import TaxSettingsTab from "@/components/tax-settings"
 
 interface ProductFormData {
   name: string
@@ -667,7 +668,7 @@ export default function DashboardPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full max-w-xl grid-cols-5 mb-8">
+          <TabsList className="grid w-full max-w-3xl grid-cols-3 sm:grid-cols-6 mb-8">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -687,6 +688,10 @@ export default function DashboardPage() {
             <TabsTrigger value="customers" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Customers
+            </TabsTrigger>
+            <TabsTrigger value="tax" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Tax (GST)
             </TabsTrigger>
           </TabsList>
 
@@ -1262,6 +1267,11 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tax & GST Settings Tab */}
+          <TabsContent value="tax" className="space-y-6">
+            <TaxSettingsTab />
           </TabsContent>
         </Tabs>
       </div>

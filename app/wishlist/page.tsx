@@ -1,38 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Heart } from "lucide-react"
 import { useWishlist } from "@/components/wishlist-context"
-import { useAuth } from "@/components/auth-context"
 import { useCurrency } from "@/components/currency-context"
 import { useLanguage } from "@/components/language-context"
 import { useToast } from "@/hooks/use-toast"
-import AuthModal from "@/components/auth-modal"
 import { Button } from "@/components/ui/button"
-
-interface WishlistProduct {
-  _id: string
-  productId: string
-  productName: string
-  productPrice: number
-  productImage: string
-  productCategory?: string
-}
 
 export default function WishlistPage() {
   const { items, removeItem, loading } = useWishlist()
-  const { isAuthenticated } = useAuth()
   const { formatPrice } = useCurrency()
   const { t } = useLanguage()
   const { toast } = useToast()
-  const [showAuthModal, setShowAuthModal] = useState(false)
-
-  useEffect(() => {
-    if (!isAuthenticated && !loading) {
-      setShowAuthModal(true)
-    }
-  }, [isAuthenticated, loading])
 
   const handleRemoveFromWishlist = async (productId: string, productName: string, e: React.MouseEvent) => {
     e.preventDefault()
@@ -66,30 +46,6 @@ export default function WishlistPage() {
     )
   }
 
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-12">
-          <div className="text-center py-12">
-            <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h1 className="text-3xl font-bold mb-2">Sign in to view your wishlist</h1>
-            <p className="text-muted-foreground mb-6">
-              Please sign in to see your saved items.
-            </p>
-            <Button onClick={() => setShowAuthModal(true)}>
-              Sign In
-            </Button>
-          </div>
-        </div>
-        <AuthModal 
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
-      </main>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 md:px-8 lg:px-12 py-8 md:py-12">
@@ -99,20 +55,20 @@ export default function WishlistPage() {
           <p className="text-muted-foreground">
             {items.length === 0 
               ? "Your wishlist is empty" 
-              : `${items.length} ${items.length === 1 ? 'item' : 'items'} saved`}
+              : `${items.length} ${items.length === 1 ? 'item' : 'items'} saved in this session`}
           </p>
         </div>
 
         {/* Wishlist Items */}
         {items.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-16 border rounded-2xl bg-white shadow-sm">
             <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-2xl font-semibold mb-2">{t('Your wishlist is empty')}</h2>
             <p className="text-muted-foreground mb-6">
               {t('Start adding items you love to your wishlist.')}
             </p>
             <Link href="/shop">
-              <Button>{t('Browse Products')}</Button>
+              <Button className="bg-primary hover:bg-primary/90">{t('Browse Products')}</Button>
             </Link>
           </div>
         ) : (
@@ -168,7 +124,7 @@ export default function WishlistPage() {
 
                   {/* Price */}
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-blue-600 group-hover:text-[#785D32] transition-colors duration-300">
+                    <span className="text-lg font-bold text-primary group-hover:text-[#c4a47c] transition-colors duration-300">
                       {formatPrice(item.productPrice)}
                     </span>
                   </div>
@@ -178,13 +134,6 @@ export default function WishlistPage() {
           </div>
         )}
       </div>
-      
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => setShowAuthModal(false)}
-      />
     </main>
   )
 }
-

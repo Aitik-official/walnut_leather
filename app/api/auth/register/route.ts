@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
+    // Hash password (10 rounds is standard & significantly faster in JS than 12)
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create user
     const newUser = {

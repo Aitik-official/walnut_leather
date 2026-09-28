@@ -184,9 +184,16 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
       {!isInHero && (
         <div className="bg-black text-white py-2 px-4">
           <div className="mx-auto max-w-7xl flex items-center justify-center">
-            <p className="text-xs md:text-sm text-center">
-              FREE DELIVERY ON ORDERS OVER $50 | SHOP NOW, PAY LATER WITH KLARNA
-            </p>
+            <Link 
+              href="/collection" 
+              className="text-xs md:text-sm text-center font-medium tracking-wider uppercase hover:text-amber-200 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Handcrafted Full-Grain Leather</span>
+              <span className="hidden sm:inline text-white/50">•</span>
+              <span className="hidden sm:inline">Heritage Jackets & Goods</span>
+              <span className="text-white/50">•</span>
+              <span className="underline underline-offset-4 font-semibold">Explore Collection</span>
+            </Link>
           </div>
         </div>
       )}
@@ -304,9 +311,11 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
 
         {/* Center - Logo - Always visible */}
         <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 z-10 group" aria-label="Walnut Leather home">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${isInHero ? 'bg-white/20 backdrop-blur-sm' : 'bg-primary'}`}>
-            <span className={`font-bold text-sm ${isInHero ? 'text-white' : 'text-primary-foreground'}`}>W</span>
-          </div>
+          <img 
+            src="/logo/walnut-leather-logoonly.png" 
+            alt="Walnut Leather Logo" 
+            className="h-9 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-110" 
+          />
           <span className={`text-xl md:text-2xl font-bold tracking-tight transition-colors duration-300 group-hover:text-primary ${isInHero ? 'text-foreground' : 'text-foreground'}`}>
             Walnut Leather
           </span>
@@ -476,11 +485,12 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="text-sm text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1">
-                  <span>{currency} ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£'})</span>
+                  <span>{currency} ({currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '£'})</span>
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCurrency('INR')}>INR (₹)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCurrency('USD')}>USD ($)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCurrency('EUR')}>EUR (€)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCurrency('GBP')}>GBP (£)</DropdownMenuItem>
