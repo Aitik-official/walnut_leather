@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Open_Sans, Work_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import Script from "next/script"
 import { Suspense } from "react"
 import Layout from "@/components/layout"
 import "./globals.css"
@@ -36,6 +37,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${openSans.variable} ${workSans.variable} antialiased`}>
+      <head>
+        {/* Google tag (gtag.js) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18526517640"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-18526517640');
+          `}
+        </Script>
+      </head>
       <body className="font-sans">
         <Suspense fallback={null}>
           <Layout>
