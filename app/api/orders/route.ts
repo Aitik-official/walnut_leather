@@ -77,9 +77,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId: orderId,
+      order: order,
       message: 'Order placed successfully',
       data: {
         orderId: orderId,
+        order: order,
         total: order.totals.total,
         status: order.status,
         estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
@@ -97,21 +99,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET method to fetch orders (for admin dashboard)
+// GET method to fetch orders (for admin dashboard and order confirmation)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const orderId = searchParams.get('orderId')
     const status = searchParams.get('status')
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const limit = parseInt(searchParams.get('limit') || '50')
     const page = parseInt(searchParams.get('page') || '1')
     const skip = (page - 1) * limit
 
     const { db } = await connectToDatabase()
     const ordersCollection = db.collection(COLLECTIONS.ORDERS)
 
+    // Specific order lookup
+    if (orderId) {
+      const order = await ordersCollection.findOne({ orderId })
+      if (order) {
+        return NextResponse.json({
+          success: true,
+          order,
+          orders: [order],
+          data: [order]
+        })
+      }
+    }
+
     // Build query
     const query: any = {}
-    if (status) {
+    if (status && status !== 'all') {
       query.status = status
     }
 

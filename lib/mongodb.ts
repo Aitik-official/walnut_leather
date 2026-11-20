@@ -24,10 +24,19 @@ if (!MONGODB_DB) {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-let cached = global.mongo
+interface MongoConnection {
+  conn: { client: MongoClient; db: Db } | null
+  promise: Promise<{ client: MongoClient; db: Db }> | null
+}
 
-if (!cached) {
-  cached = global.mongo = { conn: null, promise: null }
+declare global {
+  var mongo: MongoConnection | undefined
+}
+
+let cached: MongoConnection = global.mongo || { conn: null, promise: null }
+
+if (!global.mongo) {
+  global.mongo = cached
 }
 
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {

@@ -1,7 +1,6 @@
-import type React from "react"
 import type { Metadata } from "next"
 import { Open_Sans, Work_Sans } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 import { Suspense } from "react"
 import Layout from "@/components/layout"
 import "./globals.css"

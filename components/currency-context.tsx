@@ -31,30 +31,39 @@ type CurrencyContextType = {
 const CurrencyContext = createContext<CurrencyContextType | null>(null)
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>('USD')
+  const [currency, setCurrencyState] = useState<Currency>('INR')
 
   useEffect(() => {
-    // Load currency from localStorage
-    const savedCurrency = localStorage.getItem('currency') as Currency | null
-    if (savedCurrency && ['USD', 'INR', 'EUR', 'GBP'].includes(savedCurrency)) {
-      setCurrencyState(savedCurrency)
-    }
+    try {
+      // Load currency from localStorage
+      const savedCurrency = localStorage.getItem('currency') as Currency | null
+      if (savedCurrency && ['USD', 'INR', 'EUR', 'GBP'].includes(savedCurrency)) {
+        setCurrencyState(savedCurrency)
+      } else {
+        setCurrencyState('INR')
+      }
+    } catch (e) {}
   }, [])
 
   const setCurrency = (newCurrency: Currency) => {
     setCurrencyState(newCurrency)
-    localStorage.setItem('currency', newCurrency)
+    try {
+      localStorage.setItem('currency', newCurrency)
+    } catch (e) {}
   }
 
   const convertPrice = (priceInUSD: number): number => {
-    const rate = CONVERSION_RATES[currency]
+    const rate = CONVERSION_RATES[currency] || 1
     return priceInUSD * rate
   }
 
   const formatPrice = (priceInUSD: number): string => {
     const convertedPrice = convertPrice(priceInUSD)
-    const symbol = CURRENCY_SYMBOLS[currency]
-    return `${symbol}${convertedPrice.toFixed(2)}`
+    const symbol = CURRENCY_SYMBOLS[currency] || '$'
+    if (currency === 'INR') {
+      return `${symbol}${Math.round(convertedPrice).toLocaleString('en-IN')}`
+    }
+    return `${symbol}${convertedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const value = {
@@ -62,7 +71,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     setCurrency,
     convertPrice,
     formatPrice,
-    symbol: CURRENCY_SYMBOLS[currency],
+    symbol: CURRENCY_SYMBOLS[currency] || '₹',
   }
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>

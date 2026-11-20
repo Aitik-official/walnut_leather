@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "SCROLLABLE_MODAL_STRUCTURE.tsx", "EXACT_SCROLLABLE_MODAL_CODE.tsx", "ADD_PRODUCT_MODAL_COMPLETE.tsx"]
 }

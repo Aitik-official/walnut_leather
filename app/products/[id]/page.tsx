@@ -24,6 +24,7 @@ import Link from "next/link"
 import { useCart } from "@/components/cart-context"
 import { useAuth } from "@/components/auth-context"
 import { useWishlist } from "@/components/wishlist-context"
+import { useCurrency } from "@/components/currency-context"
 import { useToast } from "@/hooks/use-toast"
 import AuthModal from "@/components/auth-modal"
 
@@ -166,6 +167,7 @@ export default function ProductDetailsPage() {
   const { isAuthenticated } = useAuth()
   const { addItem, removeItem, isInWishlist } = useWishlist()
   const { toast } = useToast()
+  const { formatPrice } = useCurrency()
   
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -450,12 +452,12 @@ export default function ProductDetailsPage() {
             <div className="space-y-2">
               <div className="flex items-center space-x-4">
                 <span className="text-3xl font-bold text-foreground">
-                  ${product.price.toFixed(2)}
+                  {formatPrice(product.price)}
                 </span>
                 {product.originalPrice && (
                   <>
                     <span className="text-xl text-muted-foreground line-through">
-                      ${product.originalPrice.toFixed(2)}
+                      {formatPrice(product.originalPrice)}
                     </span>
                     <Badge variant="destructive" className="bg-red-500 hover:bg-red-600">
                       Save {discountPercentage}%

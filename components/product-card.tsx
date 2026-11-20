@@ -3,6 +3,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
+import { useCurrency } from "@/components/currency-context"
 
 type Product = {
   id: string
@@ -15,6 +16,7 @@ type Product = {
 
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart()
+  const { formatPrice } = useCurrency()
   return (
     <Card className="overflow-hidden">
       <div className="aspect-square bg-muted">
@@ -30,7 +32,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <h3 className="font-medium">{product.name}</h3>
             <p className="text-sm text-muted-foreground">{product.material}</p>
           </div>
-          <p className="font-medium">${product.price.toFixed(2)}</p>
+          <p className="font-medium">{formatPrice(product.price)}</p>
         </div>
       </CardContent>
       <CardFooter className="pt-0">

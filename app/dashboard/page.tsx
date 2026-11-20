@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Upload, Image, Video, Package, Save, Eye, Trash2, Plus, Edit, Eye as ViewIcon, BarChart3, Users, ShoppingCart, Search, Truck, DollarSign, FolderTree, Receipt } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import AdminAuthModal from "@/components/admin-auth-modal"
 import CategoryManagement from "@/components/category-management"
@@ -65,6 +65,8 @@ interface DatabaseProduct {
   stock: number
   featured: boolean
   featuredNickname?: string
+  exclusive?: boolean
+  limitedTimeDeal?: boolean
   images: string[]
   videos: string[]
   createdAt: string
@@ -282,11 +284,11 @@ export default function DashboardPage() {
     if (!searchTerm) return true
     const searchLower = searchTerm.toLowerCase()
     return (
-      order.orderId.toLowerCase().includes(searchLower) ||
-      order.customer.email.toLowerCase().includes(searchLower) ||
-      order.customer.firstName.toLowerCase().includes(searchLower) ||
-      order.customer.lastName.toLowerCase().includes(searchLower) ||
-      order.items.some(item => item.name.toLowerCase().includes(searchLower))
+      (order.orderId && order.orderId.toLowerCase().includes(searchLower)) ||
+      (order.customer?.email && order.customer.email.toLowerCase().includes(searchLower)) ||
+      (order.customer?.firstName && order.customer.firstName.toLowerCase().includes(searchLower)) ||
+      (order.customer?.lastName && order.customer.lastName.toLowerCase().includes(searchLower)) ||
+      (order.items && order.items.some(item => item.name?.toLowerCase().includes(searchLower)))
     )
   })
 
@@ -812,14 +814,14 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-3">
                               <div className="relative w-12 h-12 flex-shrink-0">
                                 <img
-                                  src={product.images[0] || "/placeholder.svg"}
+                                  src={product.images?.[0] || "/placeholder.svg"}
                                   alt={product.name}
                                   className="w-full h-full object-cover rounded"
                                 />
                               </div>
                               <div>
                                 <p className="font-medium">{product.name}</p>
-                                <p className="text-xs text-muted-foreground">ID: {product._id.slice(-8)}</p>
+                                <p className="text-xs text-muted-foreground">ID: {product._id ? product._id.slice(-8) : ''}</p>
                               </div>
                             </div>
                           </TableCell>
@@ -827,7 +829,7 @@ export default function DashboardPage() {
                             <Badge variant="secondary">{product.category}</Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="font-medium">${product.price.toFixed(2)}</span>
+                            <span className="font-medium">${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -949,7 +951,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Revenue</p>
-                      <p className="text-2xl font-bold">${orders.reduce((sum, order) => sum + order.totals.total, 0).toFixed(2)}</p>
+                      <p className="text-2xl font-bold">${orders.reduce((sum, order) => sum + (order.totals?.total || 0), 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1038,40 +1040,40 @@ export default function DashboardPage() {
                           <TableCell>
                             <div>
                               <p className="font-medium">#{order.orderId}</p>
-                              <p className="text-xs text-muted-foreground">ID: {order._id.slice(-8)}</p>
+                              <p className="text-xs text-muted-foreground">ID: {order._id ? order._id.slice(-8) : ''}</p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{order.customer.firstName} {order.customer.lastName}</p>
-                              <p className="text-xs text-muted-foreground">{order.customer.email}</p>
-                              <p className="text-xs text-muted-foreground">{order.customer.phone}</p>
+                              <p className="font-medium">{order.customer?.firstName || ''} {order.customer?.lastName || ''}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer?.email || ''}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer?.phone || ''}</p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                              <p className="font-medium">{order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}</p>
                               <p className="text-xs text-muted-foreground">
-                                {order.items.reduce((sum, item) => sum + item.quantity, 0)} total qty
+                                {(order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0)} total qty
                               </p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="font-medium">${order.totals.total.toFixed(2)}</span>
+                            <span className="font-medium">${(order.totals?.total ?? 0).toFixed(2)}</span>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(order.status)}>
+                            <Badge className={getStatusColor(order.status || 'pending')}>
                               <span className="flex items-center gap-1">
                                 <Package className="h-4 w-4" />
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                               </span>
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
+                              <p className="text-sm">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</p>
                               <p className="text-xs text-muted-foreground">
-                                {new Date(order.createdAt).toLocaleTimeString()}
+                                {order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : ''}
                               </p>
                             </div>
                           </TableCell>
@@ -1130,27 +1132,27 @@ export default function DashboardPage() {
                                         <CardContent className="space-y-2">
                                           <div className="flex justify-between">
                                             <span className="text-muted-foreground">Method:</span>
-                                            <span>{selectedOrder.payment.method.toUpperCase()}</span>
+                                            <span>{selectedOrder.payment?.method ? selectedOrder.payment.method.toUpperCase() : 'N/A'}</span>
                                           </div>
                                           <div className="flex justify-between">
                                             <span className="text-muted-foreground">Card:</span>
-                                            <span>**** {selectedOrder.payment.last4}</span>
+                                            <span>**** {selectedOrder.payment?.last4 || 'N/A'}</span>
                                           </div>
                                           <div className="flex justify-between">
                                             <span className="text-muted-foreground">Subtotal:</span>
-                                            <span>${selectedOrder.totals.subtotal.toFixed(2)}</span>
+                                            <span>${(selectedOrder.totals?.subtotal ?? 0).toFixed(2)}</span>
                                           </div>
                                           <div className="flex justify-between">
                                             <span className="text-muted-foreground">Tax:</span>
-                                            <span>${selectedOrder.totals.tax.toFixed(2)}</span>
+                                            <span>${(selectedOrder.totals?.tax ?? 0).toFixed(2)}</span>
                                           </div>
                                           <div className="flex justify-between">
                                             <span className="text-muted-foreground">Shipping:</span>
-                                            <span>${selectedOrder.totals.shipping.toFixed(2)}</span>
+                                            <span>${(selectedOrder.totals?.shipping ?? 0).toFixed(2)}</span>
                                           </div>
                                           <div className="flex justify-between font-semibold text-lg">
                                             <span>Total:</span>
-                                            <span>${selectedOrder.totals.total.toFixed(2)}</span>
+                                            <span>${(selectedOrder.totals?.total ?? 0).toFixed(2)}</span>
                                           </div>
                                         </CardContent>
                                       </Card>
@@ -1168,18 +1170,18 @@ export default function DashboardPage() {
                                           <div>
                                             <h4 className="font-medium mb-2">Billing Details</h4>
                                             <div className="space-y-1 text-sm">
-                                              <p><strong>Name:</strong> {selectedOrder.customer.firstName} {selectedOrder.customer.lastName}</p>
-                                              <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
-                                              <p><strong>Phone:</strong> {selectedOrder.customer.phone}</p>
+                                              <p><strong>Name:</strong> {selectedOrder.customer?.firstName || ''} {selectedOrder.customer?.lastName || ''}</p>
+                                              <p><strong>Email:</strong> {selectedOrder.customer?.email || ''}</p>
+                                              <p><strong>Phone:</strong> {selectedOrder.customer?.phone || ''}</p>
                                             </div>
                                           </div>
                                           <div>
                                             <h4 className="font-medium mb-2">Shipping Address</h4>
                                             <div className="space-y-1 text-sm">
-                                              <p>{selectedOrder.shipping.address}</p>
-                                              {selectedOrder.shipping.apartment && <p>{selectedOrder.shipping.apartment}</p>}
-                                              <p>{selectedOrder.shipping.city}, {selectedOrder.shipping.state} {selectedOrder.shipping.zipCode}</p>
-                                              <p>{selectedOrder.shipping.country}</p>
+                                              <p>{selectedOrder.shipping?.address || ''}</p>
+                                              {selectedOrder.shipping?.apartment && <p>{selectedOrder.shipping.apartment}</p>}
+                                              <p>{selectedOrder.shipping?.city || ''}, {selectedOrder.shipping?.state || ''} {selectedOrder.shipping?.zipCode || ''}</p>
+                                              <p>{selectedOrder.shipping?.country || ''}</p>
                                             </div>
                                           </div>
                                         </div>
@@ -1195,11 +1197,11 @@ export default function DashboardPage() {
                                       </CardHeader>
                                       <CardContent>
                                         <div className="space-y-4">
-                                          {selectedOrder.items.map((item, index) => (
+                                          {(selectedOrder.items || []).map((item, index) => (
                                             <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                                               <div className="relative w-16 h-16 flex-shrink-0">
                                                 <img
-                                                  src={item.image}
+                                                  src={item.image || "/placeholder.svg"}
                                                   alt={item.name}
                                                   className="w-full h-full object-cover rounded"
                                                 />
@@ -1209,9 +1211,9 @@ export default function DashboardPage() {
                                                 <p className="text-sm text-muted-foreground">Product ID: {item.productId}</p>
                                               </div>
                                               <div className="text-right">
-                                                <p className="font-medium">${item.price.toFixed(2)}</p>
-                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                                                <p className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                                                <p className="font-medium">${(item.price || 0).toFixed(2)}</p>
+                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity || 1}</p>
+                                                <p className="text-sm font-medium">${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
                                               </div>
                                             </div>
                                           ))}

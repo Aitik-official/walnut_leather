@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { CheckCircle, Package, Truck, Mail, Home, Download, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { useCurrency } from "@/components/currency-context"
 
 interface OrderItem {
   productId: string
@@ -49,7 +50,7 @@ interface Totals {
 }
 
 interface OrderData {
-  _id: string
+  _id?: string
   orderId: string
   items: OrderItem[]
   customer: Customer
@@ -59,15 +60,16 @@ interface OrderData {
   notes?: string
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId') || 'N/A'
   const [orderData, setOrderData] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+  const { formatPrice } = useCurrency()
 
   useEffect(() => {
     if (orderId && orderId !== 'N/A') {
@@ -80,34 +82,31 @@ export default function OrderConfirmationPage() {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/orders`)
+
+      // Check session storage first for instant display
+      if (typeof window !== "undefined") {
+        try {
+          const cached = sessionStorage.getItem("last_placed_order")
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            if (parsed.orderId === orderId) {
+              setOrderData(parsed)
+            }
+          }
+        } catch (e) {}
+      }
+
+      const response = await fetch(`/api/orders?orderId=${encodeURIComponent(orderId)}`)
       const data = await response.json()
       
-      if (data.success && data.orders) {
-        // Find the order with matching orderId
-        const order = data.orders.find((o: OrderData) => o.orderId === orderId)
+      if (data.success && (data.order || (data.orders && data.orders.length > 0))) {
+        const order = data.order || data.orders.find((o: OrderData) => o.orderId === orderId) || data.orders[0]
         if (order) {
           setOrderData(order)
-        } else {
-          toast({
-            title: "Order not found",
-            description: "The order details could not be retrieved.",
-            variant: "destructive"
-          })
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch order details.",
-          variant: "destructive"
-        })
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch order details.",
-        variant: "destructive"
-      })
+      console.warn("Using fallback/cached order display:", error)
     } finally {
       setLoading(false)
     }
@@ -120,31 +119,25 @@ export default function OrderConfirmationPage() {
     estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
     items: [
       {
-        name: "Classic Rider Jacket",
+        name: "Classic Walnut Leather Jacket",
         price: 480,
         quantity: 1,
         image: "/classic-walnut-leather-rider-jacket-studio.jpg"
-      },
-      {
-        name: "Heritage Bomber",
-        price: 520,
-        quantity: 1,
-        image: "/minimal-brown-leather-bomber-jacket-studio.jpg"
       }
     ],
     shipping: {
-      name: "John Doe",
-      address: "123 Main Street",
-      city: "New York",
-      state: "NY",
-      zipCode: "10001",
+      name: "Customer",
+      address: "Delivery Address Provided",
+      city: "City",
+      state: "State",
+      zipCode: "",
       country: "United States"
     },
     totals: {
-      subtotal: 1000,
-      tax: 80,
+      subtotal: 480,
+      tax: 0,
       shipping: 0,
-      total: 1080
+      total: 480
     }
   }
 
@@ -166,8 +159,8 @@ export default function OrderConfirmationPage() {
           </p>
           {loading && (
             <div className="flex items-center justify-center gap-2 mt-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Loading order details...</span>
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Loading latest order status...</span>
             </div>
           )}
         </div>
@@ -190,11 +183,13 @@ export default function OrderConfirmationPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Order Date</span>
-                  <span>{orderData ? new Date(orderData.createdAt).toLocaleDateString() : displayData.orderDate}</span>
+                  <span>{orderData ? new Date(orderData.createdAt).toLocaleDateString() : fallbackData.orderDate}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Estimated Delivery</span>
-                  <span>{displayData.estimatedDelivery}</span>
+                  <span className="text-muted-foreground">Payment Method</span>
+                  <Badge className="bg-amber-100 text-amber-900 border border-amber-300 capitalize">
+                    {orderData?.payment?.method ? orderData.payment.method.replace('_', ' ') : 'Direct Order'}
+                  </Badge>
                 </div>
                 {orderData && (
                   <div className="flex justify-between items-center">
@@ -217,7 +212,7 @@ export default function OrderConfirmationPage() {
                   <div key={index} className="flex items-center gap-4">
                     <div className="relative w-16 h-16 flex-shrink-0">
                       <img
-                        src={item.image}
+                        src={item.image || "/placeholder.svg"}
                         alt={item.name}
                         className="w-full h-full object-cover rounded-lg"
                       />
@@ -225,12 +220,9 @@ export default function OrderConfirmationPage() {
                     <div className="flex-1">
                       <h3 className="font-medium">{item.name}</h3>
                       <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
-                      {orderData && orderData.items[index] && (
-                        <p className="text-xs text-muted-foreground">Product ID: {orderData.items[index].productId}</p>
-                      )}
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
                     </div>
                   </div>
                 ))}
@@ -247,7 +239,7 @@ export default function OrderConfirmationPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-1">
-                  <p className="font-medium">{orderData ? `${orderData.customer.firstName} ${orderData.customer.lastName}` : displayData.shipping.name}</p>
+                  <p className="font-medium">{orderData ? `${orderData.customer.firstName} ${orderData.customer.lastName}` : fallbackData.shipping.name}</p>
                   <p>{orderData ? orderData.shipping.address : displayData.shipping.address}</p>
                   {orderData && orderData.shipping.apartment && <p>{orderData.shipping.apartment}</p>}
                   <p>{orderData ? `${orderData.shipping.city}, ${orderData.shipping.state} ${orderData.shipping.zipCode}` : `${displayData.shipping.city}, ${displayData.shipping.state} ${displayData.shipping.zipCode}`}</p>
@@ -279,53 +271,9 @@ export default function OrderConfirmationPage() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Next Steps */}
-            <Card>
-              <CardHeader>
-                <CardTitle>What's Next?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Mail className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Order Confirmation Email</h3>
-                    <p className="text-sm text-muted-foreground">
-                      We've sent a confirmation email with your order details and tracking information.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Package className="h-4 w-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Order Processing</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Your order is being prepared and will be shipped within 1-2 business days.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Truck className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Tracking Information</h3>
-                    <p className="text-sm text-muted-foreground">
-                      You'll receive tracking information via email once your order ships.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Order Total & Actions */}
+          {/* Order Summary & Actions */}
           <div className="lg:col-span-1">
             <Card className="sticky top-8">
               <CardHeader>
@@ -335,33 +283,28 @@ export default function OrderConfirmationPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${displayData.totals.subtotal.toFixed(2)}</span>
+                    <span>{formatPrice(displayData.totals.subtotal)}</span>
                   </div>
                   
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span className="text-green-600">${displayData.totals.shipping.toFixed(2)}</span>
+                    <span className="text-green-600">Free</span>
                   </div>
                   
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span>${displayData.totals.tax.toFixed(2)}</span>
+                    <span>{formatPrice(displayData.totals.tax)}</span>
                   </div>
                   
                   <Separator />
                   
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span>${displayData.totals.total.toFixed(2)}</span>
+                    <span>{formatPrice(displayData.totals.total)}</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Button className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Receipt
-                  </Button>
-                  
                   <Link href="/shop" className="block">
                     <Button className="w-full bg-primary hover:bg-primary/90">
                       Continue Shopping
@@ -390,5 +333,20 @@ export default function OrderConfirmationPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your order confirmation...</p>
+        </div>
+      </main>
+    }>
+      <OrderConfirmationContent />
+    </Suspense>
   )
 }

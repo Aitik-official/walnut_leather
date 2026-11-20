@@ -37,7 +37,7 @@ interface SearchResult {
 export default function Navbar({ cartCount }: { cartCount: number }) {
   const { count } = useCart()
   const { isAuthenticated, user, logout } = useAuth()
-  const { currency, setCurrency } = useCurrency()
+  const { currency, setCurrency, formatPrice } = useCurrency()
   const { language, setLanguage, t } = useLanguage()
   const pathname = usePathname()
   const router = useRouter()
@@ -99,7 +99,7 @@ export default function Navbar({ cartCount }: { cartCount: number }) {
               id: product._id,
               name: product.name,
               image: product.images?.[0],
-              price: `$${product.price}`,
+              price: formatPrice(product.price),
               url: `/products/${product._id}`
             })
           })

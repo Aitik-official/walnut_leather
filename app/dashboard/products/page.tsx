@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Eye, Edit, Trash2, Plus, Search, Filter } from "lucide-react"
+import { Eye, Edit, Trash2, Plus, Search, Filter, Package } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 

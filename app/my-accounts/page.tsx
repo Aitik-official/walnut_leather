@@ -307,7 +307,7 @@ export default function MyAccountsPage() {
                       {orders.map((order) => (
                         <TableRow key={order._id}>
                           <TableCell className="font-medium">{order.orderNo || order.orderId || "N/A"}</TableCell>
-                          <TableCell>{formatDate(order.orderDate || order.createdAt)}</TableCell>
+                          <TableCell>{formatDate(order.orderDate || order.createdAt || new Date())}</TableCell>
                           <TableCell>
                             ₹{(order.totalAmount || order.totals?.total || 0).toLocaleString()}
                           </TableCell>
@@ -349,7 +349,7 @@ export default function MyAccountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Order Date</Label>
-                  <p className="text-sm">{formatDateTime(viewingOrder.orderDate || viewingOrder.createdAt)}</p>
+                  <p className="text-sm">{formatDateTime(viewingOrder.orderDate || viewingOrder.createdAt || new Date())}</p>
                 </div>
                 <div>
                   <Label>Status</Label>

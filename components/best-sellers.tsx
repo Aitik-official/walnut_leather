@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/components/cart-context"
+import { useCurrency } from "@/components/currency-context"
 
 type StaticProduct = {
   id: string
@@ -77,6 +78,7 @@ const staticProductAlternates: Record<string, string> = {
 
 export default function BestSellers() {
   const { add } = useCart()
+  const { formatPrice } = useCurrency()
   const [databaseProducts, setDatabaseProducts] = useState<DatabaseProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
@@ -216,11 +218,11 @@ export default function BestSellers() {
               {/* Price */}
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-[#18651b] group-hover:text-[#785D32] transition-colors duration-300">
-                  {product.price}
+                  {formatPrice(numericPrice)}
                 </span>
                 {product.originalPrice && numericOriginalPrice && numericOriginalPrice > numericPrice && (
                   <span className="text-sm text-muted-foreground group-hover:text-white/60 line-through transition-colors duration-300">
-                    {product.originalPrice}
+                    {formatPrice(numericOriginalPrice)}
                   </span>
                 )}
               </div>

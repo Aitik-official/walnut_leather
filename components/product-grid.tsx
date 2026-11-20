@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { useCurrency } from "@/components/currency-context"
 
 type Product = {
   id: string
@@ -63,6 +64,7 @@ const products: Product[] = [
 ]
 
 export default function ProductGrid({ onAddToCart }: { onAddToCart: (name: string) => void }) {
+  const { formatPrice } = useCurrency()
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
       {products.map((p) => (
@@ -89,7 +91,9 @@ export default function ProductGrid({ onAddToCart }: { onAddToCart: (name: strin
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-foreground">{p.price}</span>
+              <span className="text-2xl font-bold text-foreground">
+                {formatPrice(parseFloat(p.price.replace(/[^0-9.]/g, '')))}
+              </span>
               <div className="flex items-center space-x-1">
                 {[...Array(5)].map((_, i) => (
                   <div key={i} className="w-1 h-1 bg-primary rounded-full"></div>

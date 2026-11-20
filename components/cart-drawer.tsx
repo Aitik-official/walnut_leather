@@ -5,9 +5,11 @@ import type React from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
+import { useCurrency } from "@/components/currency-context"
 
 export default function CartDrawer({ children }: { children: React.ReactNode }) {
   const { items, increment, decrement, remove, total, clear } = useCart()
+  const { formatPrice } = useCurrency()
 
   return (
     <Sheet>
@@ -55,7 +57,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
                           +
                         </button>
                       </div>
-                      <span className="font-medium">${(i.price * i.qty).toFixed(2)}</span>
+                      <span className="font-medium">{formatPrice(i.price * i.qty)}</span>
                     </div>
                   </div>
                 </li>
@@ -67,7 +69,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
           <div className="w-full space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Subtotal</span>
-              <span className="font-semibold">${total.toFixed(2)}</span>
+              <span className="font-semibold">{formatPrice(total)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Button

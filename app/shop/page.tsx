@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Filter, X, Search, SortAsc, ChevronDown, ChevronUp } from "lucide-react"
 import ShopProductGrid from "@/components/shop-product-grid"
+import { useCurrency } from "@/components/currency-context"
 
 interface FilterOptions {
   category: string
@@ -78,6 +79,7 @@ const SORT_OPTIONS = [
 
 export default function ShopPage() {
   const { toast } = useToast()
+  const { formatPrice } = useCurrency()
   const [showFilters, setShowFilters] = useState(false)
   const [showPriceRange, setShowPriceRange] = useState(false)
   const [filters, setFilters] = useState<FilterOptions>({
@@ -277,15 +279,15 @@ export default function ShopPage() {
                         className="w-full"
                       />
                       <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>${filters.priceRange[0]}</span>
-                        <span>${filters.priceRange[1]}</span>
+                        <span>{formatPrice(filters.priceRange[0])}</span>
+                        <span>{formatPrice(filters.priceRange[1])}</span>
                       </div>
                       <div className="space-y-2 pt-2">
                         {[
-                          { label: "Under $200", range: [0, 200] },
-                          { label: "$200 - $400", range: [200, 400] },
-                          { label: "$400 - $600", range: [400, 600] },
-                          { label: "Over $600", range: [600, 1000] }
+                          { label: `Under ${formatPrice(200)}`, range: [0, 200] },
+                          { label: `${formatPrice(200)} - ${formatPrice(400)}`, range: [200, 400] },
+                          { label: `${formatPrice(400)} - ${formatPrice(600)}`, range: [400, 600] },
+                          { label: `Over ${formatPrice(600)}`, range: [600, 1000] }
                         ].map((priceRange) => (
                           <Button
                             key={priceRange.label}
