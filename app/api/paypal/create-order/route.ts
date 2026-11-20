@@ -41,26 +41,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { amount, currency = "INR" } = body
 
-    if (!amount || Number(amount) <= 0) {
+    const numericAmount = Number(amount)
+    if (isNaN(numericAmount) || numericAmount <= 0) {
       return NextResponse.json(
-        { error: "Invalid order amount" },
+        { error: "Invalid order amount. Amount must be greater than 0." },
         { status: 400 }
       )
     }
 
     // PayPal supported currencies: AUD, CAD, EUR, GBP, USD, etc.
-    // PayPal does NOT support domestic INR transactions.
-    // If currency is INR, we convert to USD for PayPal processing.
-    let chargeCurrency = currency
-    let chargeAmount = Number(amount)
+    // PayPal does NOT support domestic INR transactions for Indian merchants.
+    // Catalog product base prices in database are stored in USD.
+    let chargeCurrency = "USD"
+    let chargeAmount = numericAmount
 
-    if (currency === "INR") {
+    if (currency === "EUR") {
+      chargeCurrency = "EUR"
+      chargeAmount = Number((numericAmount * 0.92).toFixed(2))
+    } else if (currency === "GBP") {
+      chargeCurrency = "GBP"
+      chargeAmount = Number((numericAmount * 0.79).toFixed(2))
+    } else if (currency === "INR") {
       chargeCurrency = "USD"
-      // Convert INR to USD (83.5 INR = 1 USD)
-      chargeAmount = Number((Number(amount) / 83.5).toFixed(2))
+      // If amount passed is already in INR (e.g. ₹8,267 or > 500), convert back to USD:
+      if (numericAmount > 500) {
+        chargeAmount = Number((numericAmount / 83.5).toFixed(2))
+      } else {
+        // Base USD catalog price (e.g. $99, $105, or test item $0.02)
+        chargeAmount = Number(numericAmount.toFixed(2))
+      }
     } else {
-      chargeAmount = Number(Number(amount).toFixed(2))
+      chargeCurrency = "USD"
+      chargeAmount = Number(numericAmount.toFixed(2))
     }
+
+    // PayPal requires minimum value 0.01 and strictly 2 decimal places
+    if (chargeAmount < 0.01) {
+      chargeAmount = 0.01
+    }
+
+    const valueString = chargeAmount.toFixed(2)
 
     const accessToken = await getPayPalAccessToken()
     const baseUrl = getPayPalBaseUrl()
@@ -71,7 +91,7 @@ export async function POST(request: NextRequest) {
         {
           amount: {
             currency_code: chargeCurrency,
-            value: chargeAmount.toFixed(2),
+            value: valueString,
           },
           description: "Walnut Leather - Handcrafted Leather Apparel",
         },
@@ -96,8 +116,18 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok || !order.id) {
       console.error("PayPal order creation error:", order)
+      let errorMessage = order.message || "Failed to create PayPal order"
+      if (order.details && order.details.length > 0) {
+        const issue = order.details[0].issue
+        const desc = order.details[0].description
+        if (issue === "PAYEE_ACCOUNT_RESTRICTED") {
+          errorMessage = "PayPal merchant account is currently restricted by PayPal. Please complete business verification (KYC/PAN) on your PayPal dashboard."
+        } else if (desc) {
+          errorMessage = desc
+        }
+      }
       return NextResponse.json(
-        { error: order.message || "Failed to create PayPal order" },
+        { error: errorMessage, raw: order },
         { status: response.status || 500 }
       )
     }
@@ -106,7 +136,7 @@ export async function POST(request: NextRequest) {
       success: true,
       orderId: order.id,
       chargeCurrency,
-      chargeAmount,
+      chargeAmount: valueString,
     })
   } catch (error: any) {
     console.error("PayPal create-order route error:", error)

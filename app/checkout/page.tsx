@@ -140,19 +140,29 @@ export default function CheckoutPage() {
             return actions.resolve()
           },
           createOrder: async () => {
-            const res = await fetch("/api/paypal/create-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                amount: finalTotal,
-                currency,
-              }),
-            })
-            const data = await res.json()
-            if (!res.ok || !data.orderId) {
-              throw new Error(data.error || "Failed to initialize PayPal order")
+            try {
+              const res = await fetch("/api/paypal/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  amount: finalTotal,
+                  currency,
+                }),
+              })
+              const data = await res.json()
+              if (!res.ok || !data.orderId) {
+                toast({
+                  title: "PayPal Error",
+                  description: data.error || "Failed to initialize PayPal order",
+                  variant: "destructive",
+                })
+                throw new Error(data.error || "Failed to initialize PayPal order")
+              }
+              return data.orderId
+            } catch (err: any) {
+              console.error("createOrder error:", err)
+              throw err
             }
-            return data.orderId
           },
           onApprove: async (data: { orderID: string }) => {
             setIsProcessing(true)
