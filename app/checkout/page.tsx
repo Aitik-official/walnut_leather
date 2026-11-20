@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useCart } from "@/components/cart-context"
 import { useCurrency } from "@/components/currency-context"
 import { Button } from "@/components/ui/button"
@@ -91,6 +91,198 @@ export default function CheckoutPage() {
     // Additional
     notes: ""
   })
+
+  const paypalButtonRef = useRef<HTMLDivElement>(null)
+  const [isPaypalSdkLoading, setIsPaypalSdkLoading] = useState(false)
+  const [paypalSdkError, setPaypalSdkError] = useState<string | null>(null)
+
+  // Real Live PayPal Buttons rendering via official PayPal JS SDK
+  useEffect(() => {
+    if (paymentMethod !== "paypal") return
+    if (!paypalButtonRef.current) return
+    if (items.length === 0 || finalTotal <= 0) return
+
+    let isCancelled = false
+    const paypalCurrency = currency === "INR" ? "USD" : currency
+    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "BAA0HLCnKs3TD4XikY0NX-9U_Er6bx7BelxIxuOHbz-f4KvmjckV2h8l8vPrwbrlQROcboW8Xq6K1Keefc"
+
+    const renderButtons = () => {
+      if (!(window as any).paypal || !paypalButtonRef.current || isCancelled) return
+
+      try {
+        paypalButtonRef.current.innerHTML = ""
+
+        ;(window as any).paypal.Buttons({
+          style: {
+            layout: "vertical",
+            color: "gold",
+            shape: "rect",
+            label: "paypal",
+            height: 48,
+          },
+          onClick: (_data: any, actions: any) => {
+            if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.phone.trim()) {
+              toast({
+                title: "Missing Contact Details",
+                description: "Please fill in your first name, last name, email, and phone number before paying with PayPal.",
+                variant: "destructive",
+              })
+              return actions.reject()
+            }
+            if (!formData.address.trim() || !formData.city.trim() || !formData.state.trim() || !formData.zipCode.trim()) {
+              toast({
+                title: "Missing Shipping Address",
+                description: "Please enter your address, city, state, and zip code before paying with PayPal.",
+                variant: "destructive",
+              })
+              return actions.reject()
+            }
+            return actions.resolve()
+          },
+          createOrder: async () => {
+            const res = await fetch("/api/paypal/create-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: finalTotal,
+                currency,
+              }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.orderId) {
+              throw new Error(data.error || "Failed to initialize PayPal order")
+            }
+            return data.orderId
+          },
+          onApprove: async (data: { orderID: string }) => {
+            setIsProcessing(true)
+            try {
+              const res = await fetch("/api/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  paypalOrderId: data.orderID,
+                  orderData: {
+                    items: items.map((item) => ({
+                      productId: item.id,
+                      name: item.name,
+                      price: item.price,
+                      quantity: item.qty,
+                      image: item.image,
+                    })),
+                    customer: {
+                      firstName: formData.firstName.trim(),
+                      lastName: formData.lastName.trim(),
+                      email: formData.email.trim(),
+                      phone: formData.phone.trim(),
+                    },
+                    shipping: {
+                      address: formData.address.trim(),
+                      apartment: formData.apartment.trim(),
+                      city: formData.city.trim(),
+                      state: formData.state.trim(),
+                      zipCode: formData.zipCode.trim(),
+                      country: formData.country,
+                    },
+                    totals: {
+                      subtotal: total,
+                      tax: taxAmount,
+                      taxRate: taxConfig.enabled ? taxConfig.taxRate : 0,
+                      taxName: taxConfig.taxName,
+                      shipping: 0,
+                      total: finalTotal,
+                      currency,
+                    },
+                    notes: formData.notes,
+                  },
+                }),
+              })
+
+              const result = await res.json()
+              if (!res.ok || !result.success) {
+                throw new Error(result.error || "Failed to capture PayPal payment")
+              }
+
+              if (typeof window !== "undefined") {
+                try {
+                  sessionStorage.setItem(
+                    "last_placed_order",
+                    JSON.stringify({
+                      ...result.order,
+                      orderId: result.orderId,
+                    })
+                  )
+                } catch (e) {}
+              }
+
+              clear()
+              toast({
+                title: "Payment Received & Order Confirmed!",
+                description: `Your order #${result.orderId} has been successfully paid via PayPal.`,
+              })
+              router.push(`/order-confirmation?orderId=${result.orderId}`)
+            } catch (err: any) {
+              console.error("PayPal capture error:", err)
+              toast({
+                title: "Payment Error",
+                description: err.message || "Failed to finalize PayPal payment. Please contact support.",
+                variant: "destructive",
+              })
+            } finally {
+              setIsProcessing(false)
+            }
+          },
+          onError: (err: any) => {
+            console.error("PayPal Buttons error:", err)
+            toast({
+              title: "PayPal Cancelled",
+              description: "The payment was not completed or was cancelled. Please try again.",
+              variant: "destructive",
+            })
+          },
+        }).render(paypalButtonRef.current)
+        setIsPaypalSdkLoading(false)
+      } catch (err: any) {
+        console.error("Failed to render PayPal buttons:", err)
+        setPaypalSdkError(err.message || "Failed to render PayPal buttons")
+        setIsPaypalSdkLoading(false)
+      }
+    }
+
+    const existingScript = document.getElementById("paypal-sdk-script") as HTMLScriptElement | null
+    if (existingScript && (window as any).paypal) {
+      renderButtons()
+      return () => {
+        isCancelled = true
+        if (paypalButtonRef.current) paypalButtonRef.current.innerHTML = ""
+      }
+    }
+
+    if (existingScript) {
+      existingScript.remove()
+    }
+
+    setIsPaypalSdkLoading(true)
+    setPaypalSdkError(null)
+
+    const script = document.createElement("script")
+    script.id = "paypal-sdk-script"
+    script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(paypalCurrency)}&intent=capture`
+    script.async = true
+    script.onload = () => {
+      renderButtons()
+    }
+    script.onerror = () => {
+      setIsPaypalSdkLoading(false)
+      setPaypalSdkError("Unable to load PayPal checkout. Please check your connection.")
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      isCancelled = true
+      if (paypalButtonRef.current) paypalButtonRef.current.innerHTML = ""
+    }
+  }, [paymentMethod, finalTotal, currency, items.length])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -627,10 +819,10 @@ export default function CheckoutPage() {
                   <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-3">
                     <div className="flex items-center gap-2">
                       <PaypalLogo className="h-5 w-auto" />
-                      <span className="text-xs font-semibold text-blue-900">Protected by PayPal Buyer Protection</span>
+                      <span className="text-xs font-semibold text-blue-900">Official PayPal Live Checkout</span>
                     </div>
                     <p className="text-xs text-blue-800/90 leading-relaxed">
-                      Click the button below to confirm your order via PayPal. Your order is registered and confirmed in our system.
+                      Click the official PayPal button on the right to log in to your PayPal account and pay securely.
                     </p>
                   </div>
                 )}
@@ -708,30 +900,46 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Primary Action Button */}
-                <Button
-                  type="submit"
-                  disabled={isProcessing}
-                  className={`w-full text-base font-bold py-6 shadow-md transition-all ${
-                    paymentMethod === "paypal"
-                      ? "bg-[#FFC439] hover:bg-[#F2BA36] text-[#003087] border border-amber-300"
-                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                  }`}
-                >
-                  {isProcessing ? (
-                    "Processing Order..."
-                  ) : paymentMethod === "paypal" ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span>Confirm with</span>
-                      <PaypalLogo className="h-5 w-auto inline-block" />
-                      <span>({formatPrice(finalTotal)})</span>
-                    </span>
-                  ) : paymentMethod === "cod" ? (
-                    `Place Direct Order — ${formatPrice(finalTotal)}`
-                  ) : (
-                    `Place Order — ${formatPrice(finalTotal)}`
-                  )}
-                </Button>
+                {/* Primary Action Button or Real PayPal Button */}
+                {paymentMethod === "paypal" ? (
+                  <div className="space-y-3 pt-2">
+                    {isPaypalSdkLoading && (
+                      <div className="flex items-center justify-center p-4 bg-amber-50/50 border border-amber-200/60 rounded-xl text-xs text-amber-900 gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                        <span>Loading official PayPal portal...</span>
+                      </div>
+                    )}
+                    {paypalSdkError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+                        {paypalSdkError}
+                      </div>
+                    )}
+                    <div
+                      id="paypal-button-container"
+                      ref={paypalButtonRef}
+                      className="min-h-[50px] relative z-10"
+                    />
+                    <p className="text-[11px] text-center text-muted-foreground">
+                      {currency === "INR"
+                        ? `PayPal processes live in USD equivalent (~$${(finalTotal / 83.5).toFixed(2)} USD)`
+                        : "Processed live & securely by PayPal"}
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full text-base font-bold py-6 shadow-md transition-all bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    {isProcessing ? (
+                      "Processing Order..."
+                    ) : paymentMethod === "cod" ? (
+                      `Place Direct Order — ${formatPrice(finalTotal)}`
+                    ) : (
+                      `Place Order — ${formatPrice(finalTotal)}`
+                    )}
+                  </Button>
+                )}
 
                 <div className="text-center pt-1">
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
